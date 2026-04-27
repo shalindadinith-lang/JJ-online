@@ -50,11 +50,6 @@
         button:hover {
             background: #1565c0;
         }
-        .message {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 16px;
-        }
     </style>
 </head>
 <body>
@@ -77,15 +72,5 @@
 
         <button type="submit">Submit to Google Sheet</button>
     </form>
-
-    <div id="message" class="message"></div>
-
-    <script>
-        document.querySelector('form').addEventListener('submit', function() {
-            const msg = document.getElementById('message');
-            msg.style.color = 'blue';
-            msg.textContent = 'Sending data... Please wait';
-        });
-    </script>
 </body>
 </html>

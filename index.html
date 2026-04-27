@@ -3,71 +3,88 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📦 තොග කළමනාකරණය</title>
+  <title>📦 ස්මාර්ට් තොග කළමනාකරණය</title>
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, Arial, sans-serif; }
     body { background: #eef2f7; margin: 0; padding: 20px; }
     .container {
-      max-width: 1300px; margin: auto; background: white;
-      border-radius: 28px; padding: 20px 28px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      max-width: 1400px; margin: auto; background: white;
+      border-radius: 32px; padding: 20px 28px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.1);
     }
-    h2 { color: #1e466e; border-left: 6px solid #1e466e; padding-left: 18px; }
-    .form-row {
-      display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;
+    h2 { color: #1e466e; border-left: 6px solid #1e466e; padding-left: 18px; margin-top: 0; }
+    .form-group { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+    .form-group input {
+      flex: 1; padding: 12px 16px; border: 1px solid #bdc4cc; border-radius: 60px;
+      font-size: 1rem; background: #fdfdfd;
     }
-    .form-row input {
-      flex: 1; padding: 12px; border: 1px solid #bdc4cc; border-radius: 40px;
-      font-size: 1rem;
-    }
+    .btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
     button {
       background: #1e466e; border: none; color: white; padding: 10px 22px;
-      border-radius: 40px; cursor: pointer; font-weight: bold;
+      border-radius: 40px; cursor: pointer; font-weight: bold; transition: 0.2s;
     }
+    button:hover { background: #0f2d4a; transform: translateY(-1px); }
+    .btn-green { background: #2c6e2c; }
+    .btn-green:hover { background: #1e4f1e; }
     .btn-red { background: #b22234; }
+    .btn-red:hover { background: #8b1a1a; }
     .btn-gray { background: #5a6874; }
-    .search-box { width: 100%; padding: 12px; margin: 15px 0; border-radius: 60px; }
-    table { width: 100%; border-collapse: collapse; }
+    .search-box { width: 100%; padding: 12px 20px; margin: 15px 0; border-radius: 60px; border: 1px solid #ccc; font-size: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th { background: #1e466e; color: white; padding: 12px; }
     td, th { border: 1px solid #cfdee9; padding: 10px; text-align: center; }
     tr:hover td { background: #e6f2f9; cursor: pointer; }
-    .stats { display: flex; justify-content: space-between; background: #e9edf2; padding: 10px 20px; border-radius: 60px; margin: 15px 0; }
-    .msg { background: #f0f4f8; padding: 10px; border-radius: 60px; text-align: center; margin-top: 20px; }
+    .stats {
+      display: flex; justify-content: space-between; background: #e9edf2; 
+      padding: 12px 20px; border-radius: 60px; margin: 15px 0;
+      font-weight: bold;
+    }
+    .msg-area { background: #f0f4f8; padding: 12px; border-radius: 60px; text-align: center; margin-top: 20px; }
+    .low-stock { background-color: #ffe0e0 !important; }
+    @media (max-width: 700px) {
+      .form-group, .btn-group { flex-direction: column; }
+      button { width: 100%; }
+    }
   </style>
 </head>
 <body>
 <div class="container">
-  <h2>📦 තොග කළමනාකරණ පද්ධතිය</h2>
+  <h2>📦 ස්මාර්ට් තොග කළමනාකරණය</h2>
 
-  <div class="form-row">
+  <div class="form-group">
     <input type="text" id="id" placeholder="භාණ්ඩ කේතය (ID)">
     <input type="text" id="name" placeholder="නම">
     <input type="number" id="price" placeholder="මිල (රු.)">
     <input type="number" id="qty" placeholder="ප්‍රමාණය">
   </div>
-  <div class="form-row">
-    <button id="addBtn">➕ එකතු කරන්න / ප්‍රමාණය වැඩි කරන්න</button>
+
+  <div class="btn-group">
+    <button id="addBtn">➕ එකතු කරන්න / Auto Update</button>
     <button id="updateBtn" class="btn-gray">✏️ යාවත්කාලීන කරන්න</button>
     <button id="deleteBtn" class="btn-red">🗑️ මකන්න</button>
     <button id="clearBtn">🧹 පෝරමය හිස් කරන්න</button>
+    <button id="backupSheetBtn" class="btn-green">💾 Google Sheet තුළ Backup</button>
+    <button id="exportCSVBtn" class="btn-green">📥 CSV උපස්ථය (බාගත)</button>
   </div>
 
-  <input type="text" id="search" class="search-box" placeholder="🔍 සොයන්න... (කේතය, නම, මිල, ප්‍රමාණය)">
+  <input type="text" id="search" class="search-box" placeholder="🔍 සොයන්න... (ID, නම, මිල, ප්‍රමාණය)">
 
   <div class="stats">
-    <span>📊 සම්පූර්ණ භාණ්ඩ ගණන: <strong id="totalItems">0</strong></span>
+    <span>📊 සම්පූර්ණ භාණ්ඩ ප්‍රමාණය: <strong id="totalQty">0</strong></span>
     <span>💰 සම්පූර්ණ වටිනාකම: <strong id="totalValue">රු. 0</strong></span>
   </div>
 
-  <table>
+  <table id="stockTable">
     <thead><tr><th>ID</th><th>නම</th><th>මිල (රු.)</th><th>ප්‍රමාණය</th></tr></thead>
     <tbody id="tableBody"></tbody>
   </table>
-  <div id="msgBox" class="msg">✅ සූදානම් • පේළියක් ක්ලික් කළොත් විස්තර පෝරමයට එයි</div>
+
+  <div id="msgBox" class="msg-area">✅ සූදානම් • පේළියක් ක්ලික් කළොත් විස්තර පෝරමයට එයි</div>
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbzGHkcxDLxh2zdtbQycDVC81WQHHj0P-NJQIRPeMoXXlZ1bpio1cklagADOXaGwAwSR/exec"; // 👈 ඔයාගේ Web App URL එක දාන්න
+// ======================== 🔧 CONFIGURATION ========================
+const API_URL = "https://script.google.com/macros/s/AKfycbzFeJohVpMhBz4B9vOzE96NurkiOIHd8-VXyDADXEYzV1msMgxi4-ce5MK02dvsgdbi/exec"; // 👈 ඔයාගේ URL එක දාන්න
 
 // DOM elements
 const idInp = document.getElementById('id');
@@ -75,39 +92,60 @@ const nameInp = document.getElementById('name');
 const priceInp = document.getElementById('price');
 const qtyInp = document.getElementById('qty');
 const tbody = document.getElementById('tableBody');
-const search = document.getElementById('search');
+const searchBox = document.getElementById('search');
 const msgBox = document.getElementById('msgBox');
-const totalItemsSpan = document.getElementById('totalItems');
+const totalQtySpan = document.getElementById('totalQty');
 const totalValueSpan = document.getElementById('totalValue');
 
-let stockData = [];
+let stockData = []; // store current data (for search & stats)
 
+// Helper functions
 function showMessage(msg, isError = false) {
   msgBox.innerHTML = isError ? `❌ ${msg}` : `✅ ${msg}`;
-  setTimeout(() => { if(msgBox.innerHTML.includes(msg)) msgBox.innerHTML = "✅ සූදානම් • පේළියක් ක්ලික් කළොත් විස්තර පෝරමයට එයි"; }, 3000);
+  setTimeout(() => {
+    if (msgBox.innerHTML.includes(msg))
+      msgBox.innerHTML = "✅ සූදානම් • පේළියක් ක්ලික් කළොත් විස්තර පෝරමයට එයි";
+  }, 4000);
 }
 
-// Load data from Google Sheets
+// Fetch all data from backend
 async function fetchData() {
   try {
-    const res = await fetch(API);
+    const res = await fetch(API_URL);
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
-    stockData = json.data.slice(1); // header row ඉවත් කරන්න
+    stockData = json.data.slice(1); // remove header row
     renderTable(stockData);
     updateStats(stockData);
+    checkLowStock(stockData, 5);
   } catch (err) {
-    showMessage("දත්ත ගෙන්න ගන්න බැරි වුණා: " + err.message, true);
+    showMessage("දත්ත ගෙන්න ගැනීම අසාර්ථකයි: " + err.message, true);
   }
 }
 
+// Render table with optional filter
 function renderTable(data) {
   tbody.innerHTML = "";
   data.forEach(row => {
     const tr = document.createElement('tr');
     tr.onclick = () => selectRow(row[0], row[1], row[2], row[3]);
-    tr.innerHTML = `<td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td>`;
+    tr.innerHTML = `
+      <td>${escapeHtml(row[0])}</td>
+      <td>${escapeHtml(row[1])}</td>
+      <td>${parseFloat(row[2]).toFixed(2)}</td>
+      <td>${parseInt(row[3])}</td>
+    `;
     tbody.appendChild(tr);
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
   });
 }
 
@@ -119,21 +157,40 @@ function selectRow(id, name, price, qty) {
 }
 
 function updateStats(data) {
-  let totalQty = 0, totalVal = 0;
+  let totalQ = 0, totalVal = 0;
   data.forEach(row => {
     let q = parseFloat(row[3]) || 0;
     let p = parseFloat(row[2]) || 0;
-    totalQty += q;
+    totalQ += q;
     totalVal += q * p;
   });
-  totalItemsSpan.innerText = totalQty;
+  totalQtySpan.innerText = totalQ;
   totalValueSpan.innerText = `රු. ${totalVal.toFixed(2)}`;
 }
 
+// Low stock alert (threshold = 5)
+function checkLowStock(data, threshold = 5) {
+  let lowItems = [];
+  const rows = document.querySelectorAll("#stockTable tbody tr");
+  rows.forEach((row, idx) => {
+    if (idx >= data.length) return;
+    const qty = parseInt(data[idx][3]);
+    if (qty <= threshold) {
+      row.classList.add('low-stock');
+      lowItems.push(data[idx][1]);
+    } else {
+      row.classList.remove('low-stock');
+    }
+  });
+  if (lowItems.length > 0) {
+    showMessage(`⚠️ අඩු තොග ඇති භාණ්ඩ: ${lowItems.join(", ")} (≤ ${threshold})`, false);
+  }
+}
+
 // Search filter
-search.addEventListener('input', function() {
+searchBox.addEventListener('input', function() {
   const term = this.value.toLowerCase();
-  const filtered = stockData.filter(row => 
+  const filtered = stockData.filter(row =>
     row[0].toString().toLowerCase().includes(term) ||
     row[1].toString().toLowerCase().includes(term) ||
     row[2].toString().includes(term) ||
@@ -141,54 +198,97 @@ search.addEventListener('input', function() {
   );
   renderTable(filtered);
   updateStats(filtered);
+  checkLowStock(filtered, 5);
 });
 
-async function callApi(action, extra = {}) {
-  const params = new URLSearchParams({ action, id: idInp.value, name: nameInp.value, price: priceInp.value, qty: qtyInp.value, ...extra });
+// Generic API caller
+async function callApi(action, showSuccessMsg = true) {
+  const id = idInp.value.trim();
+  const name = nameInp.value.trim();
+  const price = priceInp.value;
+  const qty = qtyInp.value;
+
+  // Validation for actions that need fields
+  if (action !== 'delete' && action !== 'backup') {
+    if (!id) { showMessage("ID අවශ්‍යයි", true); return false; }
+    if (!name) { showMessage("නම අවශ්‍යයි", true); return false; }
+    if (price === "" || isNaN(parseFloat(price)) || parseFloat(price) < 0) {
+      showMessage("නිවැරදි මිලක් දෙන්න", true); return false;
+    }
+    if (qty === "" || isNaN(parseInt(qty)) || parseInt(qty) < 0) {
+      showMessage("නිවැරදි ප්‍රමාණයක් දෙන්න", true); return false;
+    }
+  }
+  if (action === 'delete' && !id) { showMessage("මැකීමට ID අවශ්‍යයි", true); return false; }
+
+  const params = new URLSearchParams({
+    action: action,
+    id: id,
+    name: name,
+    price: price,
+    qty: qty
+  });
   try {
-    const res = await fetch(`${API}?${params}`, { method: 'POST' });
+    const res = await fetch(`${API_URL}?${params}`, { method: 'POST' });
     const json = await res.json();
     if (json.success) {
-      showMessage(`සාර්ථකයි: ${json.message}`);
-      fetchData();
+      if (showSuccessMsg) showMessage(json.message);
+      await fetchData(); // refresh table
+      if (action !== 'update') clearForm();
       return true;
     } else {
       showMessage(json.message || "දෝෂයක්", true);
       return false;
     }
-  } catch(e) {
-    showMessage("සම්බන්ධතා දෝෂය: " + e.message, true);
+  } catch (err) {
+    showMessage("සම්බන්ධතා දෝෂය: " + err.message, true);
     return false;
   }
 }
 
-// Buttons
-document.getElementById('addBtn').onclick = () => {
-  if(!idInp.value || !nameInp.value || !priceInp.value || !qtyInp.value) {
-    showMessage("සියලුම ක්ෂේත්‍ර පිරවිය යුතුයි", true);
+// CSV Export (frontend backup)
+function exportToCSV() {
+  if (stockData.length === 0) {
+    showMessage("උපස්ථ කිරීමට දත්ත නැත", true);
     return;
   }
-  if(parseFloat(priceInp.value) < 0 || parseInt(qtyInp.value) < 0) {
-    showMessage("මිල සහ ප්‍රමාණය සෘණ විය නොහැක", true);
-    return;
-  }
-  callApi('add');
-};
+  let csvRows = [["ID", "Name", "Price", "Quantity"]];
+  stockData.forEach(row => {
+    csvRows.push([row[0], row[1], row[2], row[3]]);
+  });
+  const csvContent = csvRows.map(row => row.join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.href = url;
+  link.setAttribute("download", `stock_backup_${new Date().toISOString().slice(0,19)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showMessage("CSV උපස්ථය සාර්ථකයි! ගොනුව බාගත වේ.");
+}
 
-document.getElementById('updateBtn').onclick = () => {
-  if(!idInp.value) { showMessage("යාවත්කාලීන කිරීමට ID අවශ්‍යයි", true); return; }
-  callApi('update');
-};
-
-document.getElementById('deleteBtn').onclick = () => {
-  if(!idInp.value) { showMessage("මැකීමට ID අවශ්‍යයි", true); return; }
-  if(confirm("මෙම භාණ්ඩය මකන්නද?")) callApi('delete');
-};
-
-document.getElementById('clearBtn').onclick = () => {
+// Clear form
+function clearForm() {
   idInp.value = nameInp.value = priceInp.value = qtyInp.value = "";
-};
+}
 
+// Event listeners
+document.getElementById('addBtn').onclick = () => callApi('add');
+document.getElementById('updateBtn').onclick = () => callApi('update');
+document.getElementById('deleteBtn').onclick = () => {
+  if (idInp.value && confirm("මෙම භාණ්ඩය ස්ථිරවම මකන්නද?")) {
+    callApi('delete');
+  } else if (!idInp.value) {
+    showMessage("මැකීමට ID තෝරන්න", true);
+  }
+};
+document.getElementById('clearBtn').onclick = clearForm;
+document.getElementById('backupSheetBtn').onclick = () => callApi('backup', true);
+document.getElementById('exportCSVBtn').onclick = exportToCSV;
+
+// Initial load
 fetchData();
 </script>
 </body>

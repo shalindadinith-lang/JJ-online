@@ -3,55 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Manager Pro - Full CRUD</title>
+    <title>Stock Manager - Complete CRUD</title>
     <style>
-        *{box-sizing:border-box; font-family:'Segoe UI',Roboto,sans-serif;}
-        body{background:#eef2f7; margin:0; padding:24px 20px;}
-        .container{max-width:1400px; margin:0 auto;}
-        h1{font-size:2rem; background:linear-gradient(135deg,#1e466e,#0f2c44); -webkit-background-clip:text; background-clip:text; color:transparent;}
-        .sub{color:#4a627a; margin-bottom:32px; border-left:4px solid #1e88e5; padding-left:14px;}
-        .card{background:white; border-radius:28px; box-shadow:0 12px 28px rgba(0,0,0,0.08); padding:24px 28px; margin-bottom:32px;}
-        .form-grid{display:flex; flex-wrap:wrap; gap:20px; align-items:flex-end;}
-        .input-group{flex:1 1 180px; min-width:150px;}
-        .input-group label{display:block; font-weight:600; font-size:0.75rem; text-transform:uppercase; color:#2c3e66; margin-bottom:6px;}
-        .input-group input{width:100%; padding:12px 14px; border:1.5px solid #dce4ec; border-radius:18px; font-size:0.95rem;}
-        .input-group input:focus{border-color:#1e88e5; outline:none; box-shadow:0 0 0 3px rgba(30,136,229,0.2);}
-        .btn{border:none; padding:10px 22px; border-radius:40px; font-weight:600; cursor:pointer;}
-        .btn-primary{background:#1e88e5; color:white;}
-        .btn-primary:hover{background:#0b5e9e;}
-        .btn-warning{background:#f39c12; color:white;}
-        .btn-danger{background:#e74c3c; color:white;}
-        .btn-secondary{background:#95a5a6; color:white;}
-        .action-bar{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; margin-bottom:30px; gap:16px;}
-        .search-box{display:flex; gap:12px; flex:2; min-width:240px;}
-        .search-box input{flex:1; padding:12px 18px; border-radius:50px; border:1px solid #ccd7e6;}
-        .stock-table-wrapper{overflow-x:auto; border-radius:24px;}
-        table{width:100%; border-collapse:collapse; background:white;}
-        th{background:#1f2e45; color:white; padding:16px 12px; text-align:left;}
-        td{padding:14px 12px; border-bottom:1px solid #e9edf2;}
+        *{box-sizing:border-box;font-family:'Segoe UI',Roboto,sans-serif;}
+        body{background:#eef2f7;margin:0;padding:24px 20px;}
+        .container{max-width:1300px;margin:0 auto;}
+        h1{font-size:2rem;background:linear-gradient(135deg,#1e466e,#0f2c44);-webkit-background-clip:text;background-clip:text;color:transparent;}
+        .sub{color:#4a627a;margin-bottom:28px;border-left:4px solid #1e88e5;padding-left:14px;}
+        .card{background:white;border-radius:28px;box-shadow:0 8px 20px rgba(0,0,0,0.08);padding:24px 28px;margin-bottom:32px;}
+        .form-grid{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end;}
+        .input-group{flex:1 1 180px;min-width:150px;}
+        .input-group label{display:block;font-weight:600;font-size:0.75rem;text-transform:uppercase;color:#2c3e66;margin-bottom:6px;}
+        .input-group input{width:100%;padding:12px 14px;border:1.5px solid #dce4ec;border-radius:18px;font-size:0.95rem;}
+        .input-group input:focus{border-color:#1e88e5;outline:none;box-shadow:0 0 0 3px rgba(30,136,229,0.2);}
+        .btn{border:none;padding:10px 22px;border-radius:40px;font-weight:600;cursor:pointer;transition:0.2s;}
+        .btn-primary{background:#1e88e5;color:white;}
+        .btn-primary:hover{background:#0b5e9e;transform:translateY(-1px);}
+        .btn-warning{background:#f39c12;color:white;}
+        .btn-warning:hover{background:#e67e22;}
+        .btn-danger{background:#e74c3c;color:white;}
+        .btn-secondary{background:#95a5a6;color:white;}
+        .action-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;margin-bottom:30px;gap:16px;}
+        .search-box{display:flex;gap:12px;flex:2;min-width:240px;}
+        .search-box input{flex:1;padding:12px 18px;border-radius:50px;border:1px solid #ccd7e6;}
+        .stock-table-wrapper{overflow-x:auto;border-radius:24px;}
+        table{width:100%;border-collapse:collapse;background:white;}
+        th{background:#1f2e45;color:white;padding:16px 12px;text-align:left;}
+        td{padding:14px 12px;border-bottom:1px solid #e9edf2;}
         tr:hover{background:#f8fbfe;}
-        .stock-id-badge{background:#e9f0fe; color:#1e466e; font-weight:700; border-radius:24px; padding:4px 10px; display:inline-block;}
-        .action-icons button{background:transparent; border:none; font-size:1rem; cursor:pointer; margin:0 4px; padding:6px 10px; border-radius:30px;}
+        .stock-id-badge{background:#e9f0fe;color:#1e466e;font-weight:700;border-radius:24px;padding:4px 12px;display:inline-block;}
+        .action-icons button{background:transparent;border:none;font-size:0.9rem;cursor:pointer;margin:0 5px;padding:6px 12px;border-radius:30px;font-weight:500;}
         .edit-btn{color:#2c7da0;}
+        .edit-btn:hover{background:#e1f0fa;}
         .delete-btn{color:#e74c3c;}
-        .message-bar{background:#e3f2fd; border-radius:60px; padding:12px 20px; margin-top:20px; text-align:center;}
-        .error-msg{background:#ffebee; color:#c62828;}
-        .success-msg{background:#e0f7ea; color:#2e7d32;}
-        .total-value{background:#f0f4fa; border-radius:32px; padding:14px 24px; display:inline-block; font-weight:bold;}
-        @media (max-width:720px){.form-grid{flex-direction:column;} .btn{width:100%;}}
+        .delete-btn:hover{background:#ffe8e6;}
+        .message-bar{background:#e3f2fd;border-radius:60px;padding:12px 20px;margin-top:20px;text-align:center;font-weight:500;}
+        .error-msg{background:#ffebee;color:#c62828;}
+        .success-msg{background:#e0f7ea;color:#2e7d32;}
+        .total-value{background:#f0f4fa;border-radius:32px;padding:14px 24px;display:inline-block;font-weight:bold;}
+        @media (max-width:720px){.form-grid{flex-direction:column;}.btn{width:100%;}}
     </style>
 </head>
 <body>
 <div class="container">
-    <div style="display:flex; justify-content:space-between; flex-wrap:wrap;">
-        <div><h1>📈 Stock Manager Pro</h1><div class="sub">Complete CRUD · Google Sheets Backend</div></div>
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;align-items:center;">
+        <div><h1>📊 Stock Manager Pro</h1><div class="sub">No duplicates • Full CRUD • Real-time</div></div>
         <div class="total-value" id="portfolioValue">💰 Portfolio: $0.00</div>
     </div>
     <div class="card">
-        <h3 style="margin-top:0;">✏️ Stock Entry / Edit</h3>
+        <h3 style="margin-top:0;">✏️ Add / Edit Stock</h3>
         <div class="form-grid">
-            <div class="input-group"><label>STOCK ID *</label><input type="text" id="stockId" placeholder="AAPL, TSLA"></div>
-            <div class="input-group"><label>STOCK NAME *</label><input type="text" id="stockName" placeholder="Apple Inc."></div>
+            <div class="input-group"><label>STOCK ID *</label><input type="text" id="stockId" placeholder="AAPL, TSLA, MSFT" autocomplete="off"></div>
+            <div class="input-group"><label>STOCK NAME *</label><input type="text" id="stockName" placeholder="Apple Inc." autocomplete="off"></div>
             <div class="input-group"><label>PRICE ($)</label><input type="number" id="price" step="0.01" placeholder="225.50"></div>
             <div class="input-group"><label>QUANTITY</label><input type="number" id="quantity" step="1" placeholder="100"></div>
             <div class="input-group" style="display:flex; gap:12px;">
@@ -60,43 +63,316 @@
                 <button class="btn btn-secondary" id="clearBtn">🗑️ Clear</button>
             </div>
         </div>
-        <div style="font-size:13px; margin-top:14px;">💡 Click <strong>Edit</strong> on any row → modify → <strong>Update</strong>. Stock ID is unique.</div>
+        <div style="font-size:13px; margin-top:15px; color:#3a6b92;">💡 <strong>උපදෙස්:</strong> Edit කිරීමට පේළියක <strong>✏️ Edit</strong> ක්ලික් කරන්න → වෙනස් කරන්න → <strong>Update</strong> ඔබන්න. Stock ID එක duplicate විය නොහැක.</div>
     </div>
     <div class="action-bar">
-        <div class="search-box"><input type="text" id="searchInput" placeholder="🔍 Search by ID or Name"><button class="btn" id="searchBtn">Search</button><button class="btn" id="resetListBtn">Show All</button></div>
+        <div class="search-box"><input type="text" id="searchInput" placeholder="🔍 Search by Stock ID or Name"><button class="btn" id="searchBtn">Search</button><button class="btn" id="resetListBtn">Show All</button></div>
         <button class="btn" id="refreshTableBtn" style="background:#e4e9f2;">⟳ Refresh</button>
     </div>
     <div class="card" style="padding:4px 0 20px 0;">
-        <div class="stock-table-wrapper"><table id="stockTable"><thead><tr><th>Stock ID</th><th>Stock Name</th><th>Price ($)</th><th>Quantity</th><th>Total Value</th><th>Actions</th></tr></thead><tbody id="tableBody"><tr><td colspan="6" style="text-align:center;">Loading stocks...</td></tr></tbody></table></div>
+        <div class="stock-table-wrapper"><table id="stockTable"><thead><tr><th>Stock ID</th><th>Stock Name</th><th>Price ($)</th><th>Quantity</th><th>Total Value</th><th>Actions</th></thead><tbody id="tableBody"><tr><td colspan="6" style="text-align:center;">Loading stocks...</td></tr></tbody></table></div>
     </div>
     <div id="statusMessage" class="message-bar"></div>
 </div>
 <script>
-    // ⚠️ IMPORTANT: Replace with your Google Apps Script Web App URL (from Part 2)
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwyfHyEMEBPYm-o_L0r3zgfzgtMKjP9G_J3P2HEJl0KJm00ucnM0HsHGlZD_GeGhg9e/exec";
+    // 🔴 IMPORTANT: Replace with your Google Apps Script Web App URL (from Part 2)
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzp63EHKcjVsDzwb2O0fkbPWIcYwpa2EqbNwDHVyJBi8edG1t2K166Zj3bVYv9PGlQF/exec";
     
-    let currentStocks = [];
-    let editModeStockId = null;
-    const stockIdInput = document.getElementById('stockId'), stockNameInput = document.getElementById('stockName');
-    const priceInput = document.getElementById('price'), quantityInput = document.getElementById('quantity');
-    const addBtn = document.getElementById('addBtn'), updateBtn = document.getElementById('updateBtn'), clearBtn = document.getElementById('clearBtn');
-    const searchInput = document.getElementById('searchInput'), searchBtn = document.getElementById('searchBtn');
-    const resetListBtn = document.getElementById('resetListBtn'), refreshTableBtn = document.getElementById('refreshTableBtn');
-    const tableBody = document.getElementById('tableBody'), statusDiv = document.getElementById('statusMessage'), portfolioSpan = document.getElementById('portfolioValue');
+    let currentStocks = [];      // Array of stock objects
+    let editModeStockId = null;  // Stock ID being edited
+    
+    // DOM elements
+    const stockIdInput = document.getElementById('stockId');
+    const stockNameInput = document.getElementById('stockName');
+    const priceInput = document.getElementById('price');
+    const quantityInput = document.getElementById('quantity');
+    const addBtn = document.getElementById('addBtn');
+    const updateBtn = document.getElementById('updateBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resetListBtn = document.getElementById('resetListBtn');
+    const refreshTableBtn = document.getElementById('refreshTableBtn');
+    const tableBody = document.getElementById('tableBody');
+    const statusDiv = document.getElementById('statusMessage');
+    const portfolioSpan = document.getElementById('portfolioValue');
 
-    function showMessage(text, isError=false){ statusDiv.textContent=text; statusDiv.className=`message-bar ${isError?'error-msg':'success-msg'}`; setTimeout(()=>{ if(statusDiv.textContent===text){ statusDiv.className='message-bar'; statusDiv.textContent='';} },3500);}
-    function setLoading(load){ if(load){ addBtn.disabled=true; updateBtn.disabled=true; } else { addBtn.disabled=false; if(!editModeStockId) updateBtn.disabled=true; else updateBtn.disabled=false; } }
-    async function fetchAllStocks(){ try{ setLoading(true); const formData=new URLSearchParams(); formData.append('action','getAll'); const resp=await fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:formData}); const result=await resp.json(); if(result.success && Array.isArray(result.data)){ currentStocks=result.data; renderTable(currentStocks); updatePortfolio(currentStocks); showMessage(`✅ ${currentStocks.length} stocks loaded`); } else throw new Error(result.error||'Load failed'); } catch(err){ showMessage(`⚠️ Error: ${err.message}`,true); tableBody.innerHTML='<tr><td colspan="6">Failed to load data. Check URL & CORS</td></tr>'; } finally{ setLoading(false); } }
-    function updatePortfolio(stocks){ let total=0; stocks.forEach(s=>{ total+=(parseFloat(s.price)||0)*(parseInt(s.quantity)||0); }); portfolioSpan.innerHTML=`💰 Portfolio: $${total.toFixed(2)}`; }
-    function renderTable(stocks){ if(!stocks.length){ tableBody.innerHTML='<tr><td colspan="6" style="text-align:center;">📭 No stocks. Add one!</td></tr>'; return; } let html=''; stocks.forEach(s=>{ let price=parseFloat(s.price).toFixed(2), qty=parseInt(s.quantity), totalVal=(price*qty).toFixed(2); html+=`<tr><td><span class="stock-id-badge">${escapeHtml(s.stockId)}</span></td><td><strong>${escapeHtml(s.stockName)}</strong></td><td>$${price}</td><td>${qty}</td><td>$${totalVal}</td><td class="action-icons"><button class="edit-btn" data-id="${escapeHtml(s.stockId)}" data-name="${escapeHtml(s.stockName)}" data-price="${price}" data-qty="${qty}">✏️ Edit</button><button class="delete-btn" data-id="${escapeHtml(s.stockId)}">🗑️ Del</button></td></tr>`; }); tableBody.innerHTML=html; document.querySelectorAll('.edit-btn').forEach(btn=>{ btn.addEventListener('click',()=>{ stockIdInput.value=btn.dataset.id; stockNameInput.value=btn.dataset.name; priceInput.value=btn.dataset.price; quantityInput.value=btn.dataset.qty; editModeStockId=btn.dataset.id; updateBtn.disabled=false; addBtn.disabled=true; showMessage(`Editing "${editModeStockId}" → then click Update`); }); }); document.querySelectorAll('.delete-btn').forEach(btn=>{ btn.addEventListener('click',async()=>{ if(confirm(`Delete "${btn.dataset.id}"?`)) await deleteStock(btn.dataset.id); }); }); }
-    function escapeHtml(str){ if(!str)return ''; return str.replace(/[&<>]/g,function(m){ if(m==='&')return '&amp;'; if(m==='<')return '&lt;'; if(m==='>')return '&gt;'; return m;}); }
-    async function addStock(){ const stockId=stockIdInput.value.trim(), stockName=stockNameInput.value.trim(), price=parseFloat(priceInput.value), quantity=parseInt(quantityInput.value); if(!stockId||!stockName) return showMessage('Stock ID & Name required',true); if(isNaN(price)||price<=0) return showMessage('Valid price >0',true); if(isNaN(quantity)||quantity<0) return showMessage('Valid quantity',true); setLoading(true); try{ const fd=new URLSearchParams(); fd.append('action','add'); fd.append('stockId',stockId); fd.append('stockName',stockName); fd.append('price',price); fd.append('quantity',quantity); const resp=await fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:fd}); const result=await resp.json(); if(result.success){ showMessage(`✅ "${stockId}" added`); clearForm(); await fetchAllStocks(); } else showMessage(`❌ ${result.error}`,true); } catch(e){ showMessage(`Error: ${e.message}`,true); } finally{ setLoading(false); addBtn.disabled=false; } }
-    async function updateStock(){ if(!editModeStockId) return showMessage('No stock selected for edit',true); const newName=stockNameInput.value.trim(), newPrice=parseFloat(priceInput.value), newQty=parseInt(quantityInput.value); if(!newName) return showMessage('Stock name required',true); if(isNaN(newPrice)||newPrice<=0) return showMessage('Price >0',true); if(isNaN(newQty)||newQty<0) return showMessage('Quantity >=0',true); setLoading(true); try{ const fd=new URLSearchParams(); fd.append('action','update'); fd.append('stockId',editModeStockId); fd.append('stockName',newName); fd.append('price',newPrice); fd.append('quantity',newQty); const resp=await fetch(SCRIPT_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:fd}); const result=await resp.json(); if(result.success){ showMessage(`✏️ "${editModeStockId}" updated`); clearForm(); await fetchAllStocks(); } else showMessage(`Update failed: ${result.error}`,true); } catch(e){ showMessage(e.message,true); } finally{ setLoading(false); } }
-    async function deleteStock(stockId){ setLoading(true); try{ const fd=new URLSearchParams(); fd.append('action','delete'); fd.append('stockId',stockId); const resp=await fetch(SCRIPT_URL,{method:'POST',body:fd}); const result=await resp.json(); if(result.success){ showMessage(`🗑️ "${stockId}" deleted`); if(editModeStockId===stockId) clearForm(); await fetchAllStocks(); } else showMessage(`Delete error: ${result.error}`,true); } catch(e){ showMessage(e.message,true); } finally{ setLoading(false); } }
-    function searchLocal(){ const q=searchInput.value.trim().toLowerCase(); if(!q){ renderTable(currentStocks); updatePortfolio(currentStocks); return; } const filtered=currentStocks.filter(s=>s.stockId.toLowerCase().includes(q)||s.stockName.toLowerCase().includes(q)); renderTable(filtered); updatePortfolio(filtered); showMessage(`🔍 ${filtered.length} matches`); }
-    function resetSearch(){ searchInput.value=''; renderTable(currentStocks); updatePortfolio(currentStocks); showMessage('All stocks'); }
-    function clearForm(){ stockIdInput.value=''; stockNameInput.value=''; priceInput.value=''; quantityInput.value=''; editModeStockId=null; updateBtn.disabled=true; addBtn.disabled=false; }
-    addBtn.addEventListener('click',addStock); updateBtn.addEventListener('click',updateStock); clearBtn.addEventListener('click',clearForm); searchBtn.addEventListener('click',searchLocal); resetListBtn.addEventListener('click',resetSearch); refreshTableBtn.addEventListener('click',fetchAllStocks); searchInput.addEventListener('keypress',e=>{if(e.key==='Enter')searchLocal();});
+    function showMessage(msg, isError = false) {
+        statusDiv.textContent = msg;
+        statusDiv.className = `message-bar ${isError ? 'error-msg' : 'success-msg'}`;
+        setTimeout(() => {
+            if (statusDiv.textContent === msg) {
+                statusDiv.className = 'message-bar';
+                statusDiv.textContent = '';
+            }
+        }, 3500);
+    }
+
+    function setLoading(loading) {
+        if (loading) {
+            addBtn.disabled = true;
+            updateBtn.disabled = true;
+        } else {
+            addBtn.disabled = false;
+            if (editModeStockId) updateBtn.disabled = false;
+            else updateBtn.disabled = true;
+        }
+    }
+
+    // Fetch all stocks from backend
+    async function fetchAllStocks() {
+        try {
+            setLoading(true);
+            const formData = new URLSearchParams();
+            formData.append('action', 'getAll');
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success && Array.isArray(result.data)) {
+                currentStocks = result.data;
+                renderTable(currentStocks);
+                updatePortfolioValue(currentStocks);
+                showMessage(`✅ Stocks loaded: ${currentStocks.length} entries`);
+            } else {
+                throw new Error(result.error || 'Failed to load data');
+            }
+        } catch (err) {
+            console.error(err);
+            showMessage(`⚠️ Error: ${err.message}. Check Script URL & deployment.`, true);
+            tableBody.innerHTML = '<tr><td colspan="6">Connection error. Please refresh.</td></tr>';
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function updatePortfolioValue(stocks) {
+        let total = 0;
+        stocks.forEach(s => {
+            const price = parseFloat(s.price) || 0;
+            const qty = parseInt(s.quantity) || 0;
+            total += price * qty;
+        });
+        portfolioSpan.innerHTML = `💰 Portfolio: $${total.toFixed(2)}`;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function renderTable(stocks) {
+        if (!stocks.length) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">📭 No stocks found. Add your first stock.</td></tr>';
+            return;
+        }
+        let html = '';
+        for (let stock of stocks) {
+            const price = parseFloat(stock.price).toFixed(2);
+            const qty = parseInt(stock.quantity);
+            const totalVal = (price * qty).toFixed(2);
+            html += `
+                <tr>
+                    <td><span class="stock-id-badge">${escapeHtml(stock.stockId)}</span></td>
+                    <td><strong>${escapeHtml(stock.stockName)}</strong></td>
+                    <td>$${price}</td>
+                    <td>${qty}</td>
+                    <td>$${totalVal}</td>
+                    <td class="action-icons">
+                        <button class="edit-btn" data-id="${escapeHtml(stock.stockId)}" data-name="${escapeHtml(stock.stockName)}" data-price="${price}" data-qty="${qty}">✏️ Edit</button>
+                        <button class="delete-btn" data-id="${escapeHtml(stock.stockId)}">🗑️ Delete</button>
+                    </td>
+                </tr>
+            `;
+        }
+        tableBody.innerHTML = html;
+
+        // Edit buttons
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                stockIdInput.value = btn.dataset.id;
+                stockNameInput.value = btn.dataset.name;
+                priceInput.value = btn.dataset.price;
+                quantityInput.value = btn.dataset.qty;
+                editModeStockId = btn.dataset.id;
+                updateBtn.disabled = false;
+                addBtn.disabled = true;
+                showMessage(`Editing "${editModeStockId}" — make changes then click UPDATE`, false);
+            });
+        });
+
+        // Delete buttons
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const idToDelete = btn.dataset.id;
+                if (confirm(`⚠️ Are you sure you want to delete stock "${idToDelete}"?`)) {
+                    await deleteStock(idToDelete);
+                }
+            });
+        });
+    }
+
+    // ADD new stock (with duplicate check on backend)
+    async function addStock() {
+        const stockId = stockIdInput.value.trim();
+        const stockName = stockNameInput.value.trim();
+        const price = parseFloat(priceInput.value);
+        const quantity = parseInt(quantityInput.value);
+
+        if (!stockId || !stockName) return showMessage('Stock ID and Name are required', true);
+        if (isNaN(price) || price <= 0) return showMessage('Price must be greater than 0', true);
+        if (isNaN(quantity) || quantity < 0) return showMessage('Quantity must be 0 or positive', true);
+
+        setLoading(true);
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'add');
+            formData.append('stockId', stockId);
+            formData.append('stockName', stockName);
+            formData.append('price', price);
+            formData.append('quantity', quantity);
+
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                showMessage(`✅ "${stockId}" added successfully!`);
+                clearForm();
+                await fetchAllStocks();
+            } else {
+                showMessage(`❌ Failed: ${result.error}`, true);
+            }
+        } catch (err) {
+            showMessage(`Network error: ${err.message}`, true);
+        } finally {
+            setLoading(false);
+            addBtn.disabled = false;
+        }
+    }
+
+    // UPDATE existing stock
+    async function updateStock() {
+        if (!editModeStockId) return showMessage('No stock selected for update. Use Edit button first.', true);
+        const newName = stockNameInput.value.trim();
+        const newPrice = parseFloat(priceInput.value);
+        const newQty = parseInt(quantityInput.value);
+
+        if (!newName) return showMessage('Stock Name required', true);
+        if (isNaN(newPrice) || newPrice <= 0) return showMessage('Valid price >0 required', true);
+        if (isNaN(newQty) || newQty < 0) return showMessage('Valid quantity required', true);
+
+        setLoading(true);
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'update');
+            formData.append('stockId', editModeStockId);
+            formData.append('stockName', newName);
+            formData.append('price', newPrice);
+            formData.append('quantity', newQty);
+
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                showMessage(`✏️ "${editModeStockId}" updated successfully!`);
+                clearForm();
+                await fetchAllStocks();
+            } else {
+                showMessage(`Update error: ${result.error}`, true);
+            }
+        } catch (err) {
+            showMessage(`Error: ${err.message}`, true);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // DELETE stock
+    async function deleteStock(stockId) {
+        setLoading(true);
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'delete');
+            formData.append('stockId', stockId);
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData
+            });
+            const result = await response.json();
+            if (result.success) {
+                showMessage(`🗑️ "${stockId}" deleted.`);
+                if (editModeStockId === stockId) clearForm();
+                await fetchAllStocks();
+            } else {
+                showMessage(`Delete failed: ${result.error}`, true);
+            }
+        } catch (err) {
+            showMessage(`Error: ${err.message}`, true);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // Search (client-side) – works on currently loaded data
+    function searchStocks() {
+        const query = searchInput.value.trim().toLowerCase();
+        if (!query) {
+            renderTable(currentStocks);
+            updatePortfolioValue(currentStocks);
+            showMessage('Showing all stocks');
+            return;
+        }
+        const filtered = currentStocks.filter(s => 
+            s.stockId.toLowerCase().includes(query) || 
+            s.stockName.toLowerCase().includes(query)
+        );
+        renderTable(filtered);
+        updatePortfolioValue(filtered);
+        showMessage(`🔍 Found ${filtered.length} matching stocks`);
+    }
+
+    function resetSearch() {
+        searchInput.value = '';
+        renderTable(currentStocks);
+        updatePortfolioValue(currentStocks);
+        showMessage('All stocks displayed');
+    }
+
+    function clearForm() {
+        stockIdInput.value = '';
+        stockNameInput.value = '';
+        priceInput.value = '';
+        quantityInput.value = '';
+        editModeStockId = null;
+        updateBtn.disabled = true;
+        addBtn.disabled = false;
+        stockIdInput.disabled = false;
+    }
+
+    // Event listeners
+    addBtn.addEventListener('click', addStock);
+    updateBtn.addEventListener('click', updateStock);
+    clearBtn.addEventListener('click', clearForm);
+    searchBtn.addEventListener('click', searchStocks);
+    resetListBtn.addEventListener('click', resetSearch);
+    refreshTableBtn.addEventListener('click', fetchAllStocks);
+    searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchStocks(); });
+
+    // Initial load
     fetchAllStocks();
 </script>
 </body>

@@ -75,7 +75,7 @@ tr:hover { background: #f1f1f1; }
 
   <br>
 
-  <button onclick="addItem()">Add</button>
+  <button onclick="addItem()">Add / Auto Update</button>
   <button onclick="updateItem()">Update</button>
   <button onclick="deleteItem()">Delete</button>
 
@@ -95,7 +95,12 @@ tr:hover { background: #f1f1f1; }
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbw4uVR15RClp1p6WUYIv3QIXYBCRXnb3ockg_WAtFPg0Pyv6J_qZvvB6uCKoixNo-wV/exec"; // 👉 මේක replace කරන්න
+
+const API = "https://script.google.com/macros/s/AKfycbxuAhnuacKBJAI5klqEiW83Ehrs0WxB9YaI7TSkKlgku2dBvMEW3Ge3rJLq_M6RsjJ4/exec"; // 👈 replace කරන්න
+
+function val(id){
+  return document.getElementById(id).value;
+}
 
 // Load data
 function fetchData() {
@@ -127,23 +132,25 @@ function selectRow(id, name, price, qty) {
   document.getElementById("qty").value = qty;
 }
 
-// Add
+// ADD (Auto Quantity Add)
 function addItem() {
   fetch(`${API}?action=add&id=${val("id")}&name=${val("name")}&price=${val("price")}&qty=${val("qty")}`, {
     method: "POST"
   })
   .then(res => res.text())
   .then(msg => {
-    if (msg === "duplicate") {
-      alert("❌ ID already exists!");
+    if (msg === "updated") {
+      alert("🔄 Quantity Added to Existing Item!");
+    } else if (msg === "added") {
+      alert("✅ New Item Added!");
     } else {
-      alert("✅ Added!");
-      fetchData();
+      alert("❌ Error!");
     }
+    fetchData();
   });
 }
 
-// Update
+// UPDATE
 function updateItem() {
   fetch(`${API}?action=update&id=${val("id")}&name=${val("name")}&price=${val("price")}&qty=${val("qty")}`, {
     method: "POST"
@@ -153,7 +160,7 @@ function updateItem() {
   });
 }
 
-// Delete
+// DELETE
 function deleteItem() {
   fetch(`${API}?action=delete&id=${val("id")}`, {
     method: "POST"
@@ -163,7 +170,7 @@ function deleteItem() {
   });
 }
 
-// Search
+// SEARCH
 function searchItem() {
   let input = document.getElementById("search").value.toLowerCase();
   let rows = document.querySelectorAll("#table tbody tr");
@@ -175,13 +182,9 @@ function searchItem() {
   });
 }
 
-// Helper
-function val(id) {
-  return document.getElementById(id).value;
-}
-
-// Load on start
+// Load
 fetchData();
+
 </script>
 
 </body>

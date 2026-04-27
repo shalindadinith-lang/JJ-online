@@ -5,13 +5,56 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Stock Data Entry</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f4f7f9; padding: 20px; max-width: 600px; margin: 0 auto; }
-        h1 { text-align: center; color: #1e88e5; }
-        form { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        label { display: block; margin: 18px 0 6px; font-weight: bold; color: #333; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
-        button { margin-top: 25px; width: 100%; padding: 14px; background: #1e88e5; color: white; border: none; border-radius: 6px; font-size: 17px; cursor: pointer; }
-        button:hover { background: #1565c0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f9;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #1e88e5;
+        }
+        form {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin: 18px 0 6px;
+            font-weight: bold;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            margin-top: 25px;
+            width: 100%;
+            padding: 14px;
+            background: #1e88e5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        .message {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -21,18 +64,28 @@
           method="POST">
         
         <label for="stockId">Stock ID:</label>
-        <input type="text" name="stockId" placeholder="AAPL / TSLA" required>
+        <input type="text" id="stockId" name="stockId" placeholder="AAPL / TSLA" required>
 
         <label for="stockName">Stock Name:</label>
-        <input type="text" name="stockName" placeholder="Apple Inc." required>
+        <input type="text" id="stockName" name="stockName" placeholder="Apple Inc." required>
 
         <label for="price">Price:</label>
-        <input type="number" name="price" step="0.01" placeholder="225.50" required>
+        <input type="number" id="price" name="price" step="0.01" placeholder="225.50" required>
 
         <label for="quantity">Quantity:</label>
-        <input type="number" name="quantity" step="1" placeholder="50" required>
+        <input type="number" id="quantity" name="quantity" step="1" placeholder="50" required>
 
         <button type="submit">Submit to Google Sheet</button>
     </form>
+
+    <div id="message" class="message"></div>
+
+    <script>
+        document.querySelector('form').addEventListener('submit', function() {
+            const msg = document.getElementById('message');
+            msg.style.color = 'blue';
+            msg.textContent = 'Sending data... Please wait';
+        });
+    </script>
 </body>
 </html>

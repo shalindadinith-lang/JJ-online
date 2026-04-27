@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📦 ස්මාර්ට් තොග කළමනාකරණය</title>
+  <title>📦 සම්පූර්ණ තොග කළමනාකරණය</title>
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, Arial, sans-serif; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
     body { background: #eef2f7; margin: 0; padding: 20px; }
     .container {
       max-width: 1400px; margin: auto; background: white;
@@ -35,21 +35,17 @@
     td, th { border: 1px solid #cfdee9; padding: 10px; text-align: center; }
     tr:hover td { background: #e6f2f9; cursor: pointer; }
     .stats {
-      display: flex; justify-content: space-between; background: #e9edf2; 
+      display: flex; justify-content: space-between; background: #e9edf2;
       padding: 12px 20px; border-radius: 60px; margin: 15px 0;
       font-weight: bold;
     }
     .msg-area { background: #f0f4f8; padding: 12px; border-radius: 60px; text-align: center; margin-top: 20px; }
     .low-stock { background-color: #ffe0e0 !important; }
-    @media (max-width: 700px) {
-      .form-group, .btn-group { flex-direction: column; }
-      button { width: 100%; }
-    }
   </style>
 </head>
 <body>
 <div class="container">
-  <h2>📦 ස්මාර්ට් තොග කළමනාකරණය</h2>
+  <h2>📦 සම්පූර්ණ තොග කළමනාකරණය</h2>
 
   <div class="form-group">
     <input type="text" id="id" placeholder="භාණ්ඩ කේතය (ID)">
@@ -84,7 +80,8 @@
 
 <script>
 // ======================== 🔧 CONFIGURATION ========================
-const API_URL = "https://script.google.com/macros/s/AKfycbzFeJohVpMhBz4B9vOzE96NurkiOIHd8-VXyDADXEYzV1msMgxi4-ce5MK02dvsgdbi/exec"; // 👈 ඔයාගේ URL එක දාන්න
+// 👇 ඔයාගේ DEPLOYED WEB APP URL එක මෙතනට දාන්න
+const API_URL = "https://script.google.com/macros/s/AKfycbwQQSRNGVgiWc4AwdztXdN1KgvO-KFgx_GCfqraZ99iRGpClVsE0nxl22-oT5NVG8sf/exec";
 
 // DOM elements
 const idInp = document.getElementById('id');
@@ -97,11 +94,13 @@ const msgBox = document.getElementById('msgBox');
 const totalQtySpan = document.getElementById('totalQty');
 const totalValueSpan = document.getElementById('totalValue');
 
-let stockData = []; // store current data (for search & stats)
+let stockData = []; // holds current data (for search, export)
 
-// Helper functions
+// Helper: show message
 function showMessage(msg, isError = false) {
   msgBox.innerHTML = isError ? `❌ ${msg}` : `✅ ${msg}`;
+  msgBox.style.color = isError ? "#b22234" : "#1e466e";
+  console.log(msg);
   setTimeout(() => {
     if (msgBox.innerHTML.includes(msg))
       msgBox.innerHTML = "✅ සූදානම් • පේළියක් ක්ලික් කළොත් විස්තර පෝරමයට එයි";
@@ -110,22 +109,29 @@ function showMessage(msg, isError = false) {
 
 // Fetch all data from backend
 async function fetchData() {
+  showMessage("දත්ත ලබා ගැනීම...");
   try {
     const res = await fetch(API_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
     if (!json.success) throw new Error(json.message);
-    stockData = json.data.slice(1); // remove header row
+    stockData = json.data.slice(1); // remove header
     renderTable(stockData);
     updateStats(stockData);
     checkLowStock(stockData, 5);
+    showMessage(`භාණ්ඩ ${stockData.length} ක් පූරණය කළා`);
   } catch (err) {
-    showMessage("දත්ත ගෙන්න ගැනීම අසාර්ථකයි: " + err.message, true);
+    showMessage("දත්ත ලබා ගැනීම අසාර්ථකයි: " + err.message, true);
   }
 }
 
-// Render table with optional filter
+// Render table (with current stockData or filtered copy)
 function renderTable(data) {
   tbody.innerHTML = "";
+  if (data.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='4'>දත්ත නැත</td></tr>";
+    return;
+  }
   data.forEach(row => {
     const tr = document.createElement('tr');
     tr.onclick = () => selectRow(row[0], row[1], row[2], row[3]);
@@ -137,6 +143,8 @@ function renderTable(data) {
     `;
     tbody.appendChild(tr);
   });
+  // Re-apply low-stock class after render
+  checkLowStock(data, 5);
 }
 
 function escapeHtml(str) {
@@ -156,6 +164,7 @@ function selectRow(id, name, price, qty) {
   qtyInp.value = qty;
 }
 
+// Update totals
 function updateStats(data) {
   let totalQ = 0, totalVal = 0;
   data.forEach(row => {
@@ -170,26 +179,33 @@ function updateStats(data) {
 
 // Low stock alert (threshold = 5)
 function checkLowStock(data, threshold = 5) {
-  let lowItems = [];
   const rows = document.querySelectorAll("#stockTable tbody tr");
+  let lowNames = [];
   rows.forEach((row, idx) => {
     if (idx >= data.length) return;
     const qty = parseInt(data[idx][3]);
     if (qty <= threshold) {
       row.classList.add('low-stock');
-      lowItems.push(data[idx][1]);
+      lowNames.push(data[idx][1]);
     } else {
       row.classList.remove('low-stock');
     }
   });
-  if (lowItems.length > 0) {
-    showMessage(`⚠️ අඩු තොග ඇති භාණ්ඩ: ${lowItems.join(", ")} (≤ ${threshold})`, false);
+  if (lowNames.length > 0) {
+    // Show alert but don't overwrite important messages
+    const alertMsg = `⚠️ අඩු තොග ඇති භාණ්ඩ: ${lowNames.join(", ")} (≤ ${threshold})`;
+    if (!msgBox.innerHTML.includes("අඩු තොග")) showMessage(alertMsg, false);
   }
 }
 
 // Search filter
-searchBox.addEventListener('input', function() {
-  const term = this.value.toLowerCase();
+function filterTable() {
+  const term = searchBox.value.toLowerCase();
+  if (!term) {
+    renderTable(stockData);
+    updateStats(stockData);
+    return;
+  }
   const filtered = stockData.filter(row =>
     row[0].toString().toLowerCase().includes(term) ||
     row[1].toString().toLowerCase().includes(term) ||
@@ -198,8 +214,7 @@ searchBox.addEventListener('input', function() {
   );
   renderTable(filtered);
   updateStats(filtered);
-  checkLowStock(filtered, 5);
-});
+}
 
 // Generic API caller
 async function callApi(action, showSuccessMsg = true) {
@@ -208,7 +223,7 @@ async function callApi(action, showSuccessMsg = true) {
   const price = priceInp.value;
   const qty = qtyInp.value;
 
-  // Validation for actions that need fields
+  // Validations
   if (action !== 'delete' && action !== 'backup') {
     if (!id) { showMessage("ID අවශ්‍යයි", true); return false; }
     if (!name) { showMessage("නම අවශ්‍යයි", true); return false; }
@@ -221,13 +236,7 @@ async function callApi(action, showSuccessMsg = true) {
   }
   if (action === 'delete' && !id) { showMessage("මැකීමට ID අවශ්‍යයි", true); return false; }
 
-  const params = new URLSearchParams({
-    action: action,
-    id: id,
-    name: name,
-    price: price,
-    qty: qty
-  });
+  const params = new URLSearchParams({ action, id, name, price, qty });
   try {
     const res = await fetch(`${API_URL}?${params}`, { method: 'POST' });
     const json = await res.json();
@@ -246,7 +255,7 @@ async function callApi(action, showSuccessMsg = true) {
   }
 }
 
-// CSV Export (frontend backup)
+// CSV Export (pure frontend)
 function exportToCSV() {
   if (stockData.length === 0) {
     showMessage("උපස්ථ කිරීමට දත්ත නැත", true);
@@ -287,6 +296,9 @@ document.getElementById('deleteBtn').onclick = () => {
 document.getElementById('clearBtn').onclick = clearForm;
 document.getElementById('backupSheetBtn').onclick = () => callApi('backup', true);
 document.getElementById('exportCSVBtn').onclick = exportToCSV;
+
+// Attach search event
+searchBox.addEventListener('input', filterTable);
 
 // Initial load
 fetchData();

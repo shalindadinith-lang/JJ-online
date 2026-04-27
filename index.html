@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Manager with Google Sheets</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, 'Segoe UI', monospace; }
+        body { background: #f0f4f8; margin: 0; padding: 20px; }
+        .container { max-width: 1300px; margin: auto; background: white; border-radius: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); overflow: hidden; }
+        .header { background: #0f3b2c; color: white; padding: 20px 30px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; align-items: center; }
+        .search-box { display: flex; gap: 8px; background: white; padding: 5px 15px; border-radius: 40px; }
+        .search-box input { border: none; padding: 8px; width: 200px; outline: none; border-radius: 40px; }
+        .search-box button { background: #0f3b2c; color: white; border: none; padding: 6px 15px; border-radius: 40px; cursor: pointer; }
+        .tabs { display: flex; background: #f1f5f9; padding: 0 20px; gap: 12px; }
+        .tab { padding: 14px 24px; cursor: pointer; font-weight: 600; border-bottom: 3px solid transparent; }
+        .tab.active { border-bottom-color: #0f3b2c; background: white; color: #0f3b2c; }
+        .tab-content { display: none; padding: 25px; }
+        .tab-content.active { display: block; }
+        .form-card, .table-card { background: #fff; border-radius: 20px; padding: 20px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px; }
+        input, button { padding: 10px 12px; border-radius: 12px; border: 1px solid #cbd5e1; width: 100%; }
+        button { background: #0f3b2c; color: white; font-weight: bold; border: none; cursor: pointer; }
+        button:hover { opacity: 0.9; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #eef2ff; }
+        .edit-btn, .del-btn { padding: 4px 12px; width: auto; font-size: 12px; margin-right: 6px; }
+        .edit-btn { background: #eab308; color: black; }
+        .del-btn { background: #dc2626; }
+        @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+        .message { background: #d1fae5; padding: 10px; border-radius: 12px; margin-top: 15px; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <span>📦 Stock Manager (GitHub + Google Sheets)</span>
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="ID or Name...">
+            <button id="searchBtn">Search</button>
+        </div>
+    </div>
+    <div class="tabs">
+        <div class="tab active" data-tab="add">➕ Add Stock</div>
+        <div class="tab" data-tab="manage">📋 Manage Stock</div>
+    </div>
+
+    <div id="add" class="tab-content active">
+        <div class="grid-2">
+            <div class="form-card">
+                <h3>New Item</h3>
+                <form id="addForm">
+                    <input type="text" id="itemId" placeholder="Item ID (e.g., P001)" required><br><br>
+                    <input type="text" id="itemName" placeholder="Item Name" required><br><br>
+                    <input type="number" id="price" placeholder="Price" required><br><br>
+                    <input type="number" id="quantity" placeholder="Quantity" required><br><br>
+                    <button type="submit">➕ Add to Google Sheet</button>
+                </form>
+                <div id="addMsg"></div>
+            </div>
+            <div class="form-card">
+                <h3>💡 How it works</h3>
+                <p>✅ Data saved directly to your Google Sheet via API.<br>✅ Hosted on GitHub Pages.<br>✅ Edit / Delete / Search.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="manage" class="tab-content">
+        <div class="table-card">
+            <h3>All Stock Items</h3>
+            <div style="overflow-x: auto;">
+                <table id="stockTable">
+                    <thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Qty</th><th>Actions</th></tr></thead>
+                    <tbody id="tableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ========== REPLACE WITH YOUR APPS SCRIPT WEB APP URL ==========
+    const API_URL = 'https://script.google.com/macros/s/AKfycby2yowb13t-0PTN4H0tiSiqQqFj5jzCXHggXr8UHcgIuUxqIzOWAbZrqw7AFjm9jP5k/exec';  // <--- CHANGE THIS
+
+    // Helper: fetch all items (GET)
+    async function fetchItems() {
+        const res = await fetch(`${API_URL}?action=get`);
+        return await res.json();
+    }
+
+    // Helper: search items
+    async function searchItems(query) {
+        const res = await fetch(`${API_URL}?action=search&q=${encodeURIComponent(query)}`);
+        return await res.json();
+    }
+
+    // Render table
+    async function renderStockTable() {
+        const items = await fetchItems();
+        const tbody = document.getElementById('tableBody');
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="5">No items found</td></tr>';
+            return;
+        }
+        let html = '';
+        items.forEach(item => {
+            html += `<tr>
+                        <td>${escapeHtml(item.id)}</td>
+                        <td>${escapeHtml(item.name)}</td>
+                        <td>${item.price.toFixed(2)}</td>
+                        <td>${item.quantity}</td>
+                        <td>
+                            <button class="edit-btn" onclick='editItem(${JSON.stringify(item)})'>✏️ Edit</button>
+                            <button class="del-btn" onclick='deleteItem(${item.row})'>🗑️ Delete</button>
+                        </td>
+                     </tr>`;
+        });
+        tbody.innerHTML = html;
+    }
+
+    window.editItem = function(item) {
+        const newName = prompt('Edit name:', item.name);
+        if (!newName) return;
+        const newPrice = parseFloat(prompt('Edit price:', item.price));
+        if (isNaN(newPrice)) return;
+        const newQty = parseInt(prompt('Edit quantity:', item.quantity));
+        if (isNaN(newQty)) return;
+        
+        const updated = { row: item.row, id: item.id, name: newName, price: newPrice, quantity: newQty };
+        fetch(API_URL, {
+            method: 'POST',
+            mode: 'no-cors',  // required for Apps Script
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', item: updated })
+        }).then(() => {
+            alert('Updated!');
+            renderStockTable();
+        });
+    }
+
+    window.deleteItem = function(row) {
+        if (!confirm('Delete this item?')) return;
+        fetch(API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', row: row })
+        }).then(() => {
+            alert('Deleted');
+            renderStockTable();
+        });
+    }
+
+    // Add form submit
+    document.getElementById('addForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('itemId').value.trim();
+        const name = document.getElementById('itemName').value.trim();
+        const price = parseFloat(document.getElementById('price').value);
+        const quantity = parseInt(document.getElementById('quantity').value);
+        if (!id || !name || isNaN(price) || isNaN(quantity)) {
+            alert('Fill all fields correctly');
+            return;
+        }
+        const newItem = { id, name, price, quantity };
+        await fetch(API_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add', item: newItem })
+        });
+        document.getElementById('addForm').reset();
+        document.getElementById('addMsg').innerHTML = '<div class="message">✅ Added to Google Sheet!</div>';
+        setTimeout(() => document.getElementById('addMsg').innerHTML = '', 2000);
+        if (document.querySelector('.tab.active').dataset.tab === 'manage') renderStockTable();
+    });
+
+    // Search
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) {
+            renderStockTable();
+            return;
+        }
+        const results = await searchItems(query);
+        const tbody = document.getElementById('tableBody');
+        if (results.length === 0) tbody.innerHTML = '<tr><td colspan="5">No match</td></tr>';
+        else {
+            let html = '';
+            results.forEach(item => {
+                html += `<tr><td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.name)}</td><td>${item.price.toFixed(2)}</td><td>${item.quantity}</td>
+                        <td><button class="edit-btn" onclick='editItem(${JSON.stringify(item)})'>Edit</button>
+                        <button class="del-btn" onclick='deleteItem(${item.row})'>Delete</button></td></tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+    });
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const tabId = tab.dataset.tab;
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if (tabId === 'manage') renderStockTable();
+        });
+    });
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // initial load if manage tab is default (but it's not, but on manage switch it will load)
+    window.onload = () => {
+        // if manage is active by some state
+        if (document.querySelector('.tab.active').dataset.tab === 'manage') renderStockTable();
+    }
+</script>
+</body>
+</html>

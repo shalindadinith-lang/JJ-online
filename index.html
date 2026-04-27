@@ -3,198 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Manager with Google Sheets</title>
+    <title>Stock Data Entry</title>
     <style>
-        * { box-sizing: border-box; font-family: system-ui; }
-        body { background: #eef2ff; margin: 0; padding: 20px; }
-        .container { max-width: 1300px; margin: auto; background: white; border-radius: 28px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .header { background: #0f3b2c; color: white; padding: 20px 25px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 15px; align-items: center; }
-        .search-box { background: white; padding: 5px 12px; border-radius: 60px; display: flex; gap: 8px; }
-        .search-box input { border: none; padding: 8px; width: 200px; outline: none; border-radius: 40px; }
-        .search-box button { background: #0f3b2c; color: white; border: none; padding: 6px 16px; border-radius: 40px; cursor: pointer; }
-        .tabs { display: flex; background: #f1f5f9; padding: 0 25px; gap: 12px; }
-        .tab { padding: 14px 24px; cursor: pointer; font-weight: 600; border-bottom: 3px solid transparent; }
-        .tab.active { border-bottom-color: #0f3b2c; background: white; color: #0f3b2c; }
-        .tab-content { display: none; padding: 28px; }
-        .tab-content.active { display: block; }
-        .form-card, .table-card { background: white; border-radius: 20px; padding: 24px; border: 1px solid #e2e8f0; margin-bottom: 20px; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px; }
-        input, button { width: 100%; padding: 12px; border-radius: 14px; border: 1px solid #cbd5e1; }
-        button { background: #0f3b2c; color: white; border: none; cursor: pointer; font-weight: bold; }
-        .edit-btn { background: #eab308; color: black; width: auto; padding: 6px 14px; }
-        .delete-btn { background: #dc2626; width: auto; padding: 6px 14px; }
-        .action-buttons { display: flex; gap: 8px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { background: #f8fafc; }
-        .message { background: #d1fae5; padding: 12px; border-radius: 14px; text-align: center; margin-top: 15px; }
-        @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f9;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            color: #1e88e5;
+        }
+        form {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            background: #1e88e5;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #1565c0;
+        }
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-<div class="container">
-    <div class="header">
-        <span>📦 Stock Manager ↔ Google Sheets</span>
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="ID or Name...">
-            <button id="searchBtn">Search</button>
-        </div>
-    </div>
-    <div class="tabs">
-        <div class="tab active" data-tab="add">➕ Add Stock</div>
-        <div class="tab" data-tab="manage">📋 Manage Stock</div>
-    </div>
+    <h1>Stock Data Entry</h1>
+    
+    <form id="stockForm">
+        <label for="stockId">Stock ID:</label>
+        <input type="text" id="stockId" name="stockId" placeholder="AAPL / TSLA" required>
 
-    <div id="add" class="tab-content active">
-        <div class="grid-2">
-            <div class="form-card">
-                <h3>Add New Item</h3>
-                <form id="addForm">
-                    <input type="text" id="itemId" placeholder="Item ID (e.g., P001)" required><br><br>
-                    <input type="text" id="itemName" placeholder="Item Name" required><br><br>
-                    <input type="number" id="price" placeholder="Price" required><br><br>
-                    <input type="number" id="quantity" placeholder="Quantity" required><br><br>
-                    <button type="submit">Save to Google Sheet</button>
-                </form>
-                <div id="addMsg"></div>
-            </div>
-            <div class="form-card">
-                <h3>✨ Live sync</h3>
-                <p>All data stored in your Google Sheet. Edit / Delete / Search from Manage tab.</p>
-            </div>
-        </div>
-    </div>
+        <label for="stockName">Stock Name:</label>
+        <input type="text" id="stockName" name="stockName" placeholder="Apple Inc." required>
 
-    <div id="manage" class="tab-content">
-        <div class="table-card">
-            <h3>Stock List</h3>
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Qty</th><th>Actions</th></tr></thead>
-                    <tbody id="tableBody"><tr><td colspan="5">Loading...</td></tr></tbody>
-                </table>
-            </div>
-            <div id="manageMsg"></div>
-        </div>
-    </div>
-</div>
+        <label for="price">Price (Rs. or USD):</label>
+        <input type="number" id="price" name="price" step="0.01" placeholder="225.50" required>
 
-<script>
-    // 🛠️ REPLACE THIS URL WITH YOUR DEPLOYED APPS SCRIPT WEB APP URL
-    const API_URL = 'https://script.google.com/macros/s/AKfycbz_6cb5VHHm9g-xO7MHQSK7Ikg6XTK6ntV25-64Y1Qo5dmKLuYAG970UL5CBOQf4mRu/exec';
+        <label for="quantity">Quantity:</label>
+        <input type="number" id="quantity" name="quantity" step="1" placeholder="50" required>
 
-    // ---------- helper fetch (CORS) ----------
-    async function fetchAPI(endpoint, options = {}) {
-        const response = await fetch(endpoint, {
-            ...options,
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/json' }
+        <button type="submit">Submit to Google Sheet</button>
+    </form>
+
+    <div id="message" class="message"></div>
+
+    <script>
+        const form = document.getElementById('stockForm');
+        const messageDiv = document.getElementById('message');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            // ඔයාගේ Google Apps Script Web App URL මෙතන දාන්න (පහතින් කියන ආකාරයට හදාගන්න)
+            const scriptURL = "https://script.google.com/macros/s/AKfycbwbbHq09eprWX_JRK1uCVlhlq_i52qxJ_cRF1omLQCR8Rjj4RU54irF18lFhvfiSjiw/exec";
+
+            try {
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    body: JSON.stringify(data),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    messageDiv.style.color = "green";
+                    messageDiv.textContent = "✅ Data successfully added to Google Sheet!";
+                    form.reset();
+                } else {
+                    throw new Error(result.message || "Unknown error");
+                }
+            } catch (error) {
+                messageDiv.style.color = "red";
+                messageDiv.textContent = "❌ Error: " + error.message;
+                console.error(error);
+            }
         });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-    }
-
-    async function getAllItems() { return fetchAPI(API_URL + '?action=get'); }
-    async function searchItems(q) { return fetchAPI(`${API_URL}?action=search&q=${encodeURIComponent(q)}`); }
-    async function addItem(item) { return fetchAPI(API_URL, { method: 'POST', body: JSON.stringify({ action: 'add', item }) }); }
-    async function updateItem(item) { return fetchAPI(API_URL, { method: 'POST', body: JSON.stringify({ action: 'update', item }) }); }
-    async function deleteItem(row) { return fetchAPI(API_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', row }) }); }
-
-    async function renderManageTable() {
-        const tbody = document.getElementById('tableBody');
-        try {
-            const items = await getAllItems();
-            if (!items.length) { tbody.innerHTML = '<tr><td colspan="5">No items</td></tr>'; return; }
-            let html = '';
-            items.forEach(i => {
-                html += `<tr>
-                    <td>${escapeHtml(i.id)}</td><td>${escapeHtml(i.name)}</td>
-                    <td>${i.price.toFixed(2)}</td><td>${i.quantity}</td>
-                    <td class="action-buttons">
-                        <button class="edit-btn" data-row="${i.row}" data-id="${escapeHtml(i.id)}" data-name="${escapeHtml(i.name)}" data-price="${i.price}" data-qty="${i.quantity}">Edit</button>
-                        <button class="delete-btn" data-row="${i.row}">Delete</button>
-                    </td>
-                </tr>`;
-            });
-            tbody.innerHTML = html;
-            attachEditDeleteEvents();
-        } catch(err) {
-            tbody.innerHTML = `<tr><td colspan="5">Error: ${err.message}</td></tr>`;
-        }
-    }
-
-    function attachEditDeleteEvents() {
-        document.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.onclick = async () => {
-                const row = parseInt(btn.dataset.row);
-                const newName = prompt('New name:', btn.dataset.name);
-                if (!newName) return;
-                const newPrice = parseFloat(prompt('New price:', btn.dataset.price));
-                if (isNaN(newPrice)) return;
-                const newQty = parseInt(prompt('New quantity:', btn.dataset.qty));
-                if (isNaN(newQty)) return;
-                await updateItem({ row, id: btn.dataset.id, name: newName, price: newPrice, quantity: newQty });
-                showMsg('manage', 'Updated');
-                renderManageTable();
-            };
-        });
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.onclick = async () => {
-                if (!confirm('Delete?')) return;
-                await deleteItem(parseInt(btn.dataset.row));
-                showMsg('manage', 'Deleted');
-                renderManageTable();
-            };
-        });
-    }
-
-    document.getElementById('addForm').onsubmit = async (e) => {
-        e.preventDefault();
-        const id = document.getElementById('itemId').value.trim();
-        const name = document.getElementById('itemName').value.trim();
-        const price = parseFloat(document.getElementById('price').value);
-        const quantity = parseInt(document.getElementById('quantity').value);
-        if (!id || !name || isNaN(price) || isNaN(quantity)) return alert('Fill all');
-        await addItem({ id, name, price, quantity });
-        document.getElementById('addForm').reset();
-        document.getElementById('addMsg').innerHTML = '<div class="message">✅ Saved to Google Sheet!</div>';
-        setTimeout(() => document.getElementById('addMsg').innerHTML = '', 2500);
-    };
-
-    document.getElementById('searchBtn').onclick = async () => {
-        const q = document.getElementById('searchInput').value.trim();
-        if (!q) { renderManageTable(); return; }
-        const items = await searchItems(q);
-        const tbody = document.getElementById('tableBody');
-        if (!items.length) { tbody.innerHTML = '<tr><td colspan="5">No match</td></tr>'; return; }
-        let html = '';
-        items.forEach(i => {
-            html += `<tr><td>${escapeHtml(i.id)}</td><td>${escapeHtml(i.name)}</td><td>${i.price.toFixed(2)}</td><td>${i.quantity}</td>
-            <td class="action-buttons"><button class="edit-btn" data-row="${i.row}" data-id="${escapeHtml(i.id)}" data-name="${escapeHtml(i.name)}" data-price="${i.price}" data-qty="${i.quantity}">Edit</button>
-            <button class="delete-btn" data-row="${i.row}">Delete</button></td></tr>`;
-        });
-        tbody.innerHTML = html;
-        attachEditDeleteEvents();
-    };
-
-    function showMsg(tab, msg) {
-        const div = tab === 'add' ? document.getElementById('addMsg') : document.getElementById('manageMsg');
-        div.innerHTML = `<div class="message">${msg}</div>`;
-        setTimeout(() => div.innerHTML = '', 2000);
-    }
-
-    function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
-
-    // tab switching
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.onclick = () => {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(tab.dataset.tab).classList.add('active');
-            if (tab.dataset.tab === 'manage') renderManageTable();
-        };
-    });
-</script>
+    </script>
 </body>
 </html>

@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📦 සම්පූර්ණ තොග කළමනාකරණය</title>
+  <title>📦 ස්මාර්ට් තොග කළමනාකරණය</title>
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, Arial, sans-serif; }
     body { background: #eef2f7; margin: 0; padding: 20px; }
     .container {
       max-width: 1400px; margin: auto; background: white;
@@ -45,7 +45,7 @@
 </head>
 <body>
 <div class="container">
-  <h2>📦 සම්පූර්ණ තොග කළමනාකරණය</h2>
+  <h2>📦 ස්මාර්ට් තොග කළමනාකරණය</h2>
 
   <div class="form-group">
     <input type="text" id="id" placeholder="භාණ්ඩ කේතය (ID)">
@@ -81,7 +81,7 @@
 <script>
 // ======================== 🔧 CONFIGURATION ========================
 // 👇 ඔයාගේ DEPLOYED WEB APP URL එක මෙතනට දාන්න
-const API_URL = "https://script.google.com/macros/s/AKfycbwQQSRNGVgiWc4AwdztXdN1KgvO-KFgx_GCfqraZ99iRGpClVsE0nxl22-oT5NVG8sf/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzDhepE8b36QdYVOChvxd_RTjOJrVlUHVDpNIifXZ-WZ19QQ3wdjfbeHGRyFkRKjBJ2/exec";
 
 // DOM elements
 const idInp = document.getElementById('id');
@@ -107,6 +107,23 @@ function showMessage(msg, isError = false) {
   }, 4000);
 }
 
+// Safe escape for any value
+function safeString(value) {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "number") return value.toString();
+  return String(value);
+}
+
+function escapeHtml(str) {
+  const s = safeString(str);
+  return s.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
+
 // Fetch all data from backend
 async function fetchData() {
   showMessage("දත්ත ලබා ගැනීම...");
@@ -114,8 +131,11 @@ async function fetchData() {
     const res = await fetch(API_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-    if (!json.success) throw new Error(json.message);
-    stockData = json.data.slice(1); // remove header
+    if (!json.success) throw new Error(json.message || "Unknown error");
+    // Remove header row
+    stockData = json.data.slice(1);
+    // Filter out any rows that are completely empty (optional)
+    stockData = stockData.filter(row => row[0] !== "" && row[0] !== undefined);
     renderTable(stockData);
     updateStats(stockData);
     checkLowStock(stockData, 5);
@@ -125,46 +145,36 @@ async function fetchData() {
   }
 }
 
-// Render table (with current stockData or filtered copy)
 function renderTable(data) {
   tbody.innerHTML = "";
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
     tbody.innerHTML = "<tr><td colspan='4'>දත්ත නැත</td></tr>";
     return;
   }
   data.forEach(row => {
     const tr = document.createElement('tr');
     tr.onclick = () => selectRow(row[0], row[1], row[2], row[3]);
+    const idVal = escapeHtml(row[0]);
+    const nameVal = escapeHtml(row[1]);
+    const priceVal = row[2] !== undefined && row[2] !== "" ? parseFloat(row[2]).toFixed(2) : "0.00";
+    const qtyVal = row[3] !== undefined && row[3] !== "" ? parseInt(row[3]) : 0;
     tr.innerHTML = `
-      <td>${escapeHtml(row[0])}</td>
-      <td>${escapeHtml(row[1])}</td>
-      <td>${parseFloat(row[2]).toFixed(2)}</td>
-      <td>${parseInt(row[3])}</td>
+      <td>${idVal}</td>
+      <td>${nameVal}</td>
+      <td>${priceVal}</td>
+      <td>${qtyVal}</td>
     `;
     tbody.appendChild(tr);
-  });
-  // Re-apply low-stock class after render
-  checkLowStock(data, 5);
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.replace(/[&<>]/g, function(m) {
-    if (m === '&') return '&amp;';
-    if (m === '<') return '&lt;';
-    if (m === '>') return '&gt;';
-    return m;
   });
 }
 
 function selectRow(id, name, price, qty) {
-  idInp.value = id;
-  nameInp.value = name;
-  priceInp.value = price;
-  qtyInp.value = qty;
+  idInp.value = safeString(id);
+  nameInp.value = safeString(name);
+  priceInp.value = safeString(price);
+  qtyInp.value = safeString(qty);
 }
 
-// Update totals
 function updateStats(data) {
   let totalQ = 0, totalVal = 0;
   data.forEach(row => {
@@ -177,28 +187,24 @@ function updateStats(data) {
   totalValueSpan.innerText = `රු. ${totalVal.toFixed(2)}`;
 }
 
-// Low stock alert (threshold = 5)
 function checkLowStock(data, threshold = 5) {
   const rows = document.querySelectorAll("#stockTable tbody tr");
   let lowNames = [];
   rows.forEach((row, idx) => {
     if (idx >= data.length) return;
-    const qty = parseInt(data[idx][3]);
-    if (qty <= threshold) {
+    const qty = parseFloat(data[idx][3]) || 0;
+    if (qty <= threshold && qty > 0) {
       row.classList.add('low-stock');
       lowNames.push(data[idx][1]);
     } else {
       row.classList.remove('low-stock');
     }
   });
-  if (lowNames.length > 0) {
-    // Show alert but don't overwrite important messages
-    const alertMsg = `⚠️ අඩු තොග ඇති භාණ්ඩ: ${lowNames.join(", ")} (≤ ${threshold})`;
-    if (!msgBox.innerHTML.includes("අඩු තොග")) showMessage(alertMsg, false);
+  if (lowNames.length > 0 && !msgBox.innerHTML.includes("අඩු තොග")) {
+    showMessage(`⚠️ අඩු තොග ඇති භාණ්ඩ: ${lowNames.join(", ")} (≤ ${threshold})`, false);
   }
 }
 
-// Search filter
 function filterTable() {
   const term = searchBox.value.toLowerCase();
   if (!term) {
@@ -207,23 +213,21 @@ function filterTable() {
     return;
   }
   const filtered = stockData.filter(row =>
-    row[0].toString().toLowerCase().includes(term) ||
-    row[1].toString().toLowerCase().includes(term) ||
-    row[2].toString().includes(term) ||
-    row[3].toString().includes(term)
+    safeString(row[0]).toLowerCase().includes(term) ||
+    safeString(row[1]).toLowerCase().includes(term) ||
+    safeString(row[2]).includes(term) ||
+    safeString(row[3]).includes(term)
   );
   renderTable(filtered);
   updateStats(filtered);
 }
 
-// Generic API caller
 async function callApi(action, showSuccessMsg = true) {
   const id = idInp.value.trim();
   const name = nameInp.value.trim();
   const price = priceInp.value;
   const qty = qtyInp.value;
 
-  // Validations
   if (action !== 'delete' && action !== 'backup') {
     if (!id) { showMessage("ID අවශ්‍යයි", true); return false; }
     if (!name) { showMessage("නම අවශ්‍යයි", true); return false; }
@@ -242,7 +246,7 @@ async function callApi(action, showSuccessMsg = true) {
     const json = await res.json();
     if (json.success) {
       if (showSuccessMsg) showMessage(json.message);
-      await fetchData(); // refresh table
+      await fetchData();
       if (action !== 'update') clearForm();
       return true;
     } else {
@@ -255,15 +259,14 @@ async function callApi(action, showSuccessMsg = true) {
   }
 }
 
-// CSV Export (pure frontend)
 function exportToCSV() {
-  if (stockData.length === 0) {
+  if (!stockData || stockData.length === 0) {
     showMessage("උපස්ථ කිරීමට දත්ත නැත", true);
     return;
   }
   let csvRows = [["ID", "Name", "Price", "Quantity"]];
   stockData.forEach(row => {
-    csvRows.push([row[0], row[1], row[2], row[3]]);
+    csvRows.push([safeString(row[0]), safeString(row[1]), safeString(row[2]), safeString(row[3])]);
   });
   const csvContent = csvRows.map(row => row.join(",")).join("\n");
   const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
@@ -278,7 +281,6 @@ function exportToCSV() {
   showMessage("CSV උපස්ථය සාර්ථකයි! ගොනුව බාගත වේ.");
 }
 
-// Clear form
 function clearForm() {
   idInp.value = nameInp.value = priceInp.value = qtyInp.value = "";
 }
@@ -296,8 +298,6 @@ document.getElementById('deleteBtn').onclick = () => {
 document.getElementById('clearBtn').onclick = clearForm;
 document.getElementById('backupSheetBtn').onclick = () => callApi('backup', true);
 document.getElementById('exportCSVBtn').onclick = exportToCSV;
-
-// Attach search event
 searchBox.addEventListener('input', filterTable);
 
 // Initial load

@@ -41,26 +41,11 @@
     @media print {
       body * { visibility: hidden; }
       #billModal, #billModal * { visibility: visible; }
-      #billModal {
-        position: absolute; left:0; top:0; width:100%; height:auto; background:white;
-      }
-      .modal {
-        box-shadow:none; width:100%; max-width:100%; margin:0; padding:5mm;
-      }
+      #billModal { position: absolute; left:0; top:0; width:100%; height:auto; background:white; }
+      .modal { box-shadow:none; width:100%; max-width:100%; margin:0; padding:5mm; }
       .modal h2, .modal button { display: none; }
-      .bill-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr); /* 3 bills per row */
-        gap: 8mm;
-        page-break-inside: avoid;
-      }
-      .mini-bill {
-        border: 1px solid #000;
-        padding: 5mm;
-        font-size: 9pt;
-        background: white;
-        break-inside: avoid;
-      }
+      .bill-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; page-break-inside: avoid; }
+      .mini-bill { border: 1px solid #000; padding: 5mm; font-size: 9pt; background: white; break-inside: avoid; }
       .mini-bill .bill-header { font-weight:bold; font-size:10pt; margin-bottom:2mm; }
       .mini-bill .bill-customer { margin-bottom:2mm; }
       .mini-bill .bill-items { margin-bottom:2mm; }
@@ -153,6 +138,7 @@
         <input type="text" id="searchSaleInput" placeholder="Sale ID හෝ ගනුදෙනුකරු නම">
         <button id="searchSaleBtn">🔍 සොයන්න</button>
         <button id="printSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="printSelectedBills()">🖨️ තෝරාගත් බිල්පත් මුද්‍රණය</button>
+        <button id="clearSelectionBtn" class="btn-gray" style="margin-left:5px;" onclick="clearSelection()">🧹 සලකුණු මකන්න</button>
       </div>
       <table id="salesHistoryTable">
         <thead>
@@ -181,12 +167,13 @@
 
 <script>
 // ======================== CONFIG ========================
-const API_URL = "https://script.google.com/macros/s/AKfycbystmJ8e4rEliyf5-lyrAwB1o_G9EBrqJX68jxoxxVUePxd_FpMpxZoORQrN2wx8i7l/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxqto6KPgoywWbQ5z-17IYazYCx-GXhPFGz-ZouGlqNC6AfAtCvNs_UFxiRRXSIeieP/exec";
 
 // Global stock data
 let stockData = [];
 let filteredStock = [];
 let cart = [];
+let selectedSales = new Set();      // තෝරාගත් බිල්පත් IDs
 const ROWS_PER_PAGE = 50;
 let currentPage = 1;
 let searchTimeout;
@@ -479,8 +466,7 @@ document.getElementById('confirmSaleBtn').onclick = async function() {
 
 // ======================== SALES HISTORY + PRINT ========================
 document.getElementById('searchSaleBtn').onclick = async function() {
-  const term = searchSaleInput.value.trim();
-  if (!term) { showPosMsg("සෙවුම් පදයක් ඇතුල් කරන්න", true); return; }
+  const term = searchSaleInput.value.trim(); // හිස් වුවත් සියල්ල පෙන්වීමට ඉඩ දෙන්න
   const params = new URLSearchParams({ action: 'get_sales', customerName: term });
   try {
     const res = await fetch(API_URL + "?" + params.toString());
@@ -494,30 +480,62 @@ function renderSalesHistory(data) {
   salesHistoryBody.innerHTML = "";
   if (!data.length) {
     salesHistoryBody.innerHTML = "<tr><td colspan='5'>ප්‍රතිඵල නැත</td></tr>";
+    document.getElementById('selectAllCheckbox').checked = false;
     return;
   }
   data.forEach(sale => {
     const row = document.createElement('tr');
+    const isChecked = selectedSales.has(sale.SaleID);
     row.innerHTML = `
-      <td><input type="checkbox" class="saleCheckbox" data-saleid="${sale.SaleID}"></td>
+      <td><input type="checkbox" class="saleCheckbox" data-saleid="${sale.SaleID}" ${isChecked ? 'checked' : ''} onchange="handleCheckboxToggle(event)"></td>
       <td>${sale.SaleID}</td>
       <td>${escapeHtml(sale.CustomerName)}</td>
       <td>${new Date(sale.Timestamp).toLocaleString('si-LK')}</td>
       <td>රු. ${parseFloat(sale.GrandTotal).toFixed(2)}</td>
     `;
     row.onclick = (e) => {
-      if (e.target.tagName !== 'INPUT') viewBill(sale.SaleID);
+      if (e.target.tagName !== 'INPUT') {
+        viewBill(sale.SaleID);
+      }
     };
     salesHistoryBody.appendChild(row);
   });
+  // Update "Select All" checkbox state
+  const allVisibleCheckboxes = document.querySelectorAll('.saleCheckbox');
+  const allChecked = allVisibleCheckboxes.length > 0 && Array.from(allVisibleCheckboxes).every(cb => cb.checked);
+  document.getElementById('selectAllCheckbox').checked = allChecked;
 }
 
-function toggleAllCheckboxes(master) {
-  document.querySelectorAll('.saleCheckbox').forEach(cb => cb.checked = master.checked);
+function handleCheckboxToggle(event) {
+  const saleId = event.target.dataset.saleid;
+  if (event.target.checked) {
+    selectedSales.add(saleId);
+  } else {
+    selectedSales.delete(saleId);
+  }
+  // Sync "Select All" checkbox
+  const allVisibleCheckboxes = document.querySelectorAll('.saleCheckbox');
+  const allChecked = allVisibleCheckboxes.length > 0 && Array.from(allVisibleCheckboxes).every(cb => cb.checked);
+  document.getElementById('selectAllCheckbox').checked = allChecked;
 }
 
-function getSelectedSaleIds() {
-  return Array.from(document.querySelectorAll('.saleCheckbox:checked')).map(cb => cb.dataset.saleid);
+function toggleAllCheckboxes(masterCheckbox) {
+  const checkboxes = document.querySelectorAll('.saleCheckbox');
+  checkboxes.forEach(cb => {
+    cb.checked = masterCheckbox.checked;
+    const saleId = cb.dataset.saleid;
+    if (masterCheckbox.checked) {
+      selectedSales.add(saleId);
+    } else {
+      selectedSales.delete(saleId);
+    }
+  });
+}
+
+function clearSelection() {
+  selectedSales.clear();
+  document.querySelectorAll('.saleCheckbox').forEach(cb => cb.checked = false);
+  document.getElementById('selectAllCheckbox').checked = false;
 }
 
 // Single bill view (with Print button inside modal)
@@ -546,8 +564,11 @@ async function viewBill(saleId) {
 
 // Print multiple selected bills
 async function printSelectedBills() {
-  const saleIds = getSelectedSaleIds();
-  if (saleIds.length === 0) { alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න."); return; }
+  if (selectedSales.size === 0) {
+    alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න.");
+    return;
+  }
+  const saleIds = Array.from(selectedSales);
   const billPromises = saleIds.map(id => {
     const params = new URLSearchParams({ action: 'get_sale', saleId: id });
     return fetch(API_URL + "?" + params.toString()).then(res => res.json());
@@ -568,7 +589,7 @@ async function printSelectedBills() {
       `;
     });
     const modal = document.getElementById('billModal');
-    modal.classList.remove('single-bill-print'); // use grid style
+    modal.classList.remove('single-bill-print'); // grid style
     document.getElementById('billContent').innerHTML = `<div class="bill-grid">${combinedHtml}</div>`;
     modal.style.display = 'flex';
     setTimeout(() => { window.print(); }, 300);

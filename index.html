@@ -21,7 +21,7 @@
     button:hover { background: #0f2d4a; transform: translateY(-1px); }
     .btn-green { background: #2c6e2c; } .btn-green:hover { background: #1e4f1e; }
     .btn-red { background: #b22234; } .btn-red:hover { background: #8b1a1a; }
-    .btn-gray { background: #5a6874; }
+    .btn-gray { background: #5a6874; } .btn-gray:hover { background: #3d484e; }
     .search-box { width: 100%; padding: 12px 20px; margin: 15px 0; border-radius: 60px; border: 1px solid #ccc; font-size: 1rem; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th { background: #1e466e; color: white; padding: 12px; }
@@ -32,12 +32,15 @@
     .low-stock { background-color: #ffe0e0 !important; }
     .cart-table td input[type="number"] { width: 70px; text-align: center; }
     .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
-    .modal { background: white; padding: 30px; border-radius: 20px; max-width: 600px; width: 90%; max-height: 80vh; overflow: auto; }
+    .modal { background: white; padding: 30px; border-radius: 20px; max-width: 700px; width: 90%; max-height: 85vh; overflow: auto; }
     .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 15px; }
     .pagination button { padding: 6px 14px; border-radius: 20px; background: #cfdee9; color: #1e466e; }
     .pagination button.active-page { background: #1e466e; color: white; }
+    .action-icons { display: flex; gap: 8px; justify-content: center; }
+    .action-icons button { padding: 4px 10px; font-size: 0.85rem; border-radius: 20px; }
+    .logo-print { display: none; }
+    .modal .logo-print { display: block; max-width: 120px; margin: 0 auto 10px; }
 
-    /* Print styles */
     @media print {
       body * { visibility: hidden; }
       #billModal, #billModal * { visibility: visible; }
@@ -49,10 +52,12 @@
       .mini-bill .bill-header { font-weight:bold; font-size:10pt; margin-bottom:2mm; }
       .mini-bill .bill-customer { margin-bottom:2mm; }
       .mini-bill .bill-items { margin-bottom:2mm; }
-      .mini-bill .bill-total { font-weight:bold; text-align:right; }
-      /* Single bill print */
+      .mini-bill .bill-subtotal,
+      .mini-bill .bill-courier { font-size: 8pt; margin-top: 1mm; }
+      .mini-bill .bill-total { font-weight:bold; text-align:right; margin-top: 2mm; }
       .single-bill-print .modal h2 { display: block; }
       .single-bill-print .modal button { display: inline-block; }
+      .single-bill-print .logo-print { display: block; }
     }
   </style>
 </head>
@@ -148,6 +153,7 @@
             <th>ගනුදෙනුකරු</th>
             <th>දිනය</th>
             <th>ග්‍රෑන්ඩ් ටෝටල්</th>
+            <th>ක්‍රියා</th>
           </tr>
         </thead>
         <tbody id="salesHistoryBody"></tbody>
@@ -165,20 +171,28 @@
   </div>
 </div>
 
-<script>
-// ======================== CONFIG ========================
-const API_URL = "https://script.google.com/macros/s/AKfycbxqto6KPgoywWbQ5z-17IYazYCx-GXhPFGz-ZouGlqNC6AfAtCvNs_UFxiRRXSIeieP/exec";
+<!-- Comment Modal -->
+<div id="commentModal" class="modal-overlay">
+  <div class="modal" style="max-width:450px;">
+    <h3>💬 Comment එක් කරන්න</h3>
+    <input type="hidden" id="commentSaleId">
+    <textarea id="commentText" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;" placeholder="බිල්පත පිළිබඳ සටහන..."></textarea>
+    <button onclick="saveComment()" style="margin-top:10px;">💾 සුරකින්න</button>
+    <button onclick="closeCommentModal()" style="margin-left:10px; background:#5a6874;">අවලංගු</button>
+  </div>
+</div>
 
-// Global stock data
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbw48uHboxcgiEfWOambtFAFQOXZhOi3xK7osCswpasnfKmq0w3druP5a-7d_yISY0WW/exec";
+
 let stockData = [];
 let filteredStock = [];
 let cart = [];
-let selectedSales = new Set();      // තෝරාගත් බිල්පත් IDs
+let selectedSales = new Set();
 const ROWS_PER_PAGE = 50;
 let currentPage = 1;
 let searchTimeout;
 
-// DOM elements
 const stockIdInp = document.getElementById('stockId');
 const stockNameInp = document.getElementById('stockName');
 const stockPriceInp = document.getElementById('stockPrice');
@@ -197,7 +211,6 @@ const posMsg = document.getElementById('posMsg');
 const salesHistoryBody = document.getElementById('salesHistoryBody');
 const searchSaleInput = document.getElementById('searchSaleInput');
 
-// ======================== UTILS ========================
 function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
 function showStockMsg(msg, isError = false) {
   stockMsgBox.innerHTML = isError ? `❌ ${msg}` : `✅ ${msg}`;
@@ -464,9 +477,9 @@ document.getElementById('confirmSaleBtn').onclick = async function() {
   } catch (err) { showPosMsg("සම්බන්ධතා දෝෂය", true); }
 };
 
-// ======================== SALES HISTORY + PRINT ========================
+// ======================== SALES HISTORY + ACTIONS ========================
 document.getElementById('searchSaleBtn').onclick = async function() {
-  const term = searchSaleInput.value.trim(); // හිස් වුවත් සියල්ල පෙන්වීමට ඉඩ දෙන්න
+  const term = searchSaleInput.value.trim();
   const params = new URLSearchParams({ action: 'get_sales', customerName: term });
   try {
     const res = await fetch(API_URL + "?" + params.toString());
@@ -479,7 +492,7 @@ document.getElementById('searchSaleBtn').onclick = async function() {
 function renderSalesHistory(data) {
   salesHistoryBody.innerHTML = "";
   if (!data.length) {
-    salesHistoryBody.innerHTML = "<tr><td colspan='5'>ප්‍රතිඵල නැත</td></tr>";
+    salesHistoryBody.innerHTML = "<tr><td colspan='6'>ප්‍රතිඵල නැත</td></tr>";
     document.getElementById('selectAllCheckbox').checked = false;
     return;
   }
@@ -492,43 +505,37 @@ function renderSalesHistory(data) {
       <td>${escapeHtml(sale.CustomerName)}</td>
       <td>${new Date(sale.Timestamp).toLocaleString('si-LK')}</td>
       <td>රු. ${parseFloat(sale.GrandTotal).toFixed(2)}</td>
+      <td class="action-icons">
+        <button class="btn-gray" onclick="event.stopPropagation(); openCommentModal('${sale.SaleID}', '${escapeHtml(sale.Comment || '')}')">💬</button>
+        <button class="btn-red" onclick="event.stopPropagation(); deleteSale('${sale.SaleID}')">🗑️</button>
+      </td>
     `;
     row.onclick = (e) => {
-      if (e.target.tagName !== 'INPUT') {
+      if (e.target.tagName !== 'INPUT' && !e.target.closest('button')) {
         viewBill(sale.SaleID);
       }
     };
     salesHistoryBody.appendChild(row);
   });
-  // Update "Select All" checkbox state
-  const allVisibleCheckboxes = document.querySelectorAll('.saleCheckbox');
-  const allChecked = allVisibleCheckboxes.length > 0 && Array.from(allVisibleCheckboxes).every(cb => cb.checked);
+  const allVisible = document.querySelectorAll('.saleCheckbox');
+  const allChecked = allVisible.length > 0 && Array.from(allVisible).every(cb => cb.checked);
   document.getElementById('selectAllCheckbox').checked = allChecked;
 }
 
 function handleCheckboxToggle(event) {
   const saleId = event.target.dataset.saleid;
-  if (event.target.checked) {
-    selectedSales.add(saleId);
-  } else {
-    selectedSales.delete(saleId);
-  }
-  // Sync "Select All" checkbox
-  const allVisibleCheckboxes = document.querySelectorAll('.saleCheckbox');
-  const allChecked = allVisibleCheckboxes.length > 0 && Array.from(allVisibleCheckboxes).every(cb => cb.checked);
-  document.getElementById('selectAllCheckbox').checked = allChecked;
+  if (event.target.checked) selectedSales.add(saleId);
+  else selectedSales.delete(saleId);
+  document.getElementById('selectAllCheckbox').checked = 
+    document.querySelectorAll('.saleCheckbox').length > 0 && 
+    Array.from(document.querySelectorAll('.saleCheckbox')).every(cb => cb.checked);
 }
 
-function toggleAllCheckboxes(masterCheckbox) {
-  const checkboxes = document.querySelectorAll('.saleCheckbox');
-  checkboxes.forEach(cb => {
-    cb.checked = masterCheckbox.checked;
-    const saleId = cb.dataset.saleid;
-    if (masterCheckbox.checked) {
-      selectedSales.add(saleId);
-    } else {
-      selectedSales.delete(saleId);
-    }
+function toggleAllCheckboxes(master) {
+  document.querySelectorAll('.saleCheckbox').forEach(cb => {
+    cb.checked = master.checked;
+    if (master.checked) selectedSales.add(cb.dataset.saleid);
+    else selectedSales.delete(cb.dataset.saleid);
   });
 }
 
@@ -538,7 +545,57 @@ function clearSelection() {
   document.getElementById('selectAllCheckbox').checked = false;
 }
 
-// Single bill view (with Print button inside modal)
+// Delete sale with stock restore
+async function deleteSale(saleId) {
+  if (!confirm(`"${saleId}" බිල්පත මකා තොග යළි එක් කරන්නද?`)) return;
+  const params = new URLSearchParams({ action: 'delete_sale', saleId });
+  try {
+    const res = await fetch(API_URL, { method: 'POST', body: params });
+    const json = await res.json();
+    if (json.success) {
+      alert(json.message);
+      if (json.data) {
+        stockData = json.data;
+        filteredStock = stockData;
+        renderStockTable();
+        updateStockStats(filteredStock);
+        updateItemDatalist();
+      }
+      // Refresh sales history
+      document.getElementById('searchSaleBtn').click();
+    } else {
+      alert(json.message);
+    }
+  } catch (err) { alert("දෝෂය: " + err.message); }
+}
+
+// Comment modal
+function openCommentModal(saleId, currentComment) {
+  document.getElementById('commentSaleId').value = saleId;
+  document.getElementById('commentText').value = currentComment || '';
+  document.getElementById('commentModal').style.display = 'flex';
+}
+function closeCommentModal() {
+  document.getElementById('commentModal').style.display = 'none';
+}
+async function saveComment() {
+  const saleId = document.getElementById('commentSaleId').value;
+  const comment = document.getElementById('commentText').value;
+  const params = new URLSearchParams({ action: 'add_comment', saleId, comment });
+  try {
+    const res = await fetch(API_URL, { method: 'POST', body: params });
+    const json = await res.json();
+    if (json.success) {
+      closeCommentModal();
+      // refresh sales list to show updated comment (optional)
+      document.getElementById('searchSaleBtn').click();
+    } else {
+      alert(json.message);
+    }
+  } catch (err) { alert("දෝෂය: " + err.message); }
+}
+
+// View bill (now with logo placeholder)
 async function viewBill(saleId) {
   const params = new URLSearchParams({ action: 'get_sale', saleId });
   try {
@@ -546,7 +603,8 @@ async function viewBill(saleId) {
     const json = await res.json();
     if (!json.success) { alert(json.message); return; }
     const { customer, items } = json;
-    let html = `<p><strong>ගනුදෙනුකරු:</strong> ${escapeHtml(customer.name || '')}<br>
+    let html = `<img class="logo-print" src="https://via.placeholder.com/120x60?text=+LOGO" alt="Logo">`; // Placeholder – change URL to your logo
+    html += `<p><strong>ගනුදෙනුකරු:</strong> ${escapeHtml(customer.name || '')}<br>
                 <strong>ලිපිනය:</strong> ${escapeHtml(customer.address || '')}<br>
                 <strong>දුරකතන:</strong> ${escapeHtml(customer.phone || '')}</p>
                 <table><thead><tr><th>අයිතමය</th><th>මිල</th><th>ප්‍රමාණය</th><th>මුළු</th></tr></thead><tbody>`;
@@ -562,12 +620,9 @@ async function viewBill(saleId) {
   } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// Print multiple selected bills
+// Multi-print (unchanged except logo is not added per mini-bill – keep as is)
 async function printSelectedBills() {
-  if (selectedSales.size === 0) {
-    alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න.");
-    return;
-  }
+  if (selectedSales.size === 0) { alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න."); return; }
   const saleIds = Array.from(selectedSales);
   const billPromises = saleIds.map(id => {
     const params = new URLSearchParams({ action: 'get_sale', saleId: id });
@@ -584,12 +639,14 @@ async function printSelectedBills() {
           <div class="bill-header">Sale ID: ${saleIds[index]}</div>
           <div class="bill-customer">${escapeHtml(customer.name || '')}</div>
           <div class="bill-items">${items.map(it => `${it.name} x${it.qty} රු.${it.total}`).join('<br>')}</div>
-          <div class="bill-total">එකතුව: රු. ${customer.grandTotal}</div>
+          <div class="bill-subtotal">උප එකතුව: රු. ${parseFloat(customer.subtotal).toFixed(2)}</div>
+          <div class="bill-courier">කුවර් ගාස්තු: රු. ${parseFloat(customer.courier).toFixed(2)}</div>
+          <div class="bill-total">ග්‍රෑන්ඩ් ටෝටල්: රු. ${parseFloat(customer.grandTotal).toFixed(2)}</div>
         </div>
       `;
     });
     const modal = document.getElementById('billModal');
-    modal.classList.remove('single-bill-print'); // grid style
+    modal.classList.remove('single-bill-print');
     document.getElementById('billContent').innerHTML = `<div class="bill-grid">${combinedHtml}</div>`;
     modal.style.display = 'flex';
     setTimeout(() => { window.print(); }, 300);
@@ -600,7 +657,6 @@ function closeModal() {
   document.getElementById('billModal').style.display = 'none';
 }
 
-// Tab Switching
 function switchTab(tabName) {
   document.getElementById('tabStock').classList.toggle('active', tabName === 'stock');
   document.getElementById('tabPOS').classList.toggle('active', tabName === 'pos');
@@ -608,7 +664,6 @@ function switchTab(tabName) {
   document.getElementById('panelPOS').classList.toggle('active', tabName === 'pos');
 }
 
-// Initial load
 fetchStock();
 </script>
 </body>

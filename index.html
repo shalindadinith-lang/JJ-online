@@ -7,8 +7,16 @@
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, Arial, sans-serif; }
     body { background: #eef2f7; margin: 0; padding: 20px; }
+    #loginScreen { max-width: 400px; margin: 80px auto; background: white; padding: 40px; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); text-align: center; }
+    #loginScreen h2 { margin-bottom: 25px; color: #1e466e; }
+    #loginScreen input { width: 100%; padding: 12px; margin: 8px 0; border-radius: 40px; border: 1px solid #bdc4cc; font-size: 1rem; }
+    #loginScreen button { width: 100%; margin-top: 15px; }
+    #loginError { color: #b22234; font-size: 0.9rem; }
+    #mainApp { display: none; }
     .container { max-width: 1400px; margin: auto; background: white; border-radius: 32px; padding: 20px 28px; box-shadow: 0 12px 30px rgba(0,0,0,0.1); }
-    h2 { color: #1e466e; border-left: 6px solid #1e466e; padding-left: 18px; margin-top: 0; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .header-bar h2 { margin:0; color: #1e466e; border-left: 6px solid #1e466e; padding-left: 18px; }
+    .settings-btn { background: #5a6874; }
     .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
     .tab { padding: 10px 24px; background: #cfdee9; border-radius: 40px; cursor: pointer; font-weight: bold; }
     .tab.active { background: #1e466e; color: white; }
@@ -62,9 +70,24 @@
   </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <h2>🔐 පිවිසුම</h2>
+  <input type="text" id="loginUsername" placeholder="පරිහරණ නාමය">
+  <input type="password" id="loginPassword" placeholder="මුරපදය">
+  <button id="loginBtn">ඇතුල් වෙන්න</button>
+  <p id="loginError"></p>
+</div>
+
+<!-- MAIN APP (hidden initially) -->
+<div id="mainApp">
 <div class="container">
-  <h2>📦 ස්මාර්ට් තොග හා POS පද්ධතිය</h2>
-  
+  <div class="header-bar">
+    <h2>📦 ස්මාර්ට් තොග හා POS පද්ධතිය</h2>
+    <button class="settings-btn" onclick="openSettings()">⚙️ සැකසුම්</button>
+  </div>
+
   <div class="tabs">
     <div id="tabStock" class="tab active" onclick="switchTab('stock')">📋 තොග කළමනාකරණය</div>
     <div id="tabPOS" class="tab" onclick="switchTab('pos')">🛒 POS බිල්පත්</div>
@@ -161,8 +184,9 @@
     </div>
   </div>
 </div>
+</div>
 
-<!-- Modal for Viewing / Printing Bills -->
+<!-- MODALS -->
 <div id="billModal" class="modal-overlay">
   <div class="modal">
     <h2>🧾 බිල්පත් විස්තර</h2>
@@ -170,8 +194,6 @@
     <button onclick="closeModal()" style="margin-top:15px;">වසන්න</button>
   </div>
 </div>
-
-<!-- Comment Modal -->
 <div id="commentModal" class="modal-overlay">
   <div class="modal" style="max-width:450px;">
     <h3>💬 Comment එක් කරන්න</h3>
@@ -181,18 +203,27 @@
     <button onclick="closeCommentModal()" style="margin-left:10px; background:#5a6874;">අවලංගු</button>
   </div>
 </div>
+<div id="settingsModal" class="modal-overlay">
+  <div class="modal" style="max-width:400px;">
+    <h3>⚙️ සැකසුම්</h3>
+    <label>🔑 නව මුරපදය (හිස් නම් වෙනස් නොවේ)</label>
+    <input type="password" id="newPassword" style="width:100%; padding:10px; margin:5px 0; border-radius:20px; border:1px solid #ccc;">
+    <label>🚚 පෙරනිමි කුවර් ගාස්තුව (රු.)</label>
+    <input type="number" id="newDefaultCourier" style="width:100%; padding:10px; margin:5px 0; border-radius:20px; border:1px solid #ccc;" min="0">
+    <button onclick="saveSettings()" style="margin-top:15px;">💾 සුරකින්න</button>
+    <button onclick="closeSettings()" style="margin-left:10px; background:#5a6874;">අවලංගු</button>
+  </div>
+</div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbzbSvCxfhH_ycEdpRo6Q_EaUxAuZW41MgjQzZ6dZNkb2fLAbkK_D-mCusw5DEI8HHpX/exec";
+const API_URL = "https://script.google.com/macros/s/.../exec"; // <-- ඔබේ URL එක දමන්න
 
-let stockData = [];
-let filteredStock = [];
-let cart = [];
-let selectedSales = new Set();
+let stockData = [], filteredStock = [], cart = [], selectedSales = new Set();
+let defaultCourier = 450;
 const ROWS_PER_PAGE = 50;
-let currentPage = 1;
-let searchTimeout;
+let currentPage = 1, searchTimeout;
 
+// DOM Elements
 const stockIdInp = document.getElementById('stockId');
 const stockNameInp = document.getElementById('stockName');
 const stockPriceInp = document.getElementById('stockPrice');
@@ -221,7 +252,69 @@ function showPosMsg(msg, isErr = false) {
   posMsg.style.color = isErr ? "#b22234" : "#1e466e";
 }
 
-// ======================== STOCK DATA & PAGINATION ========================
+// ================== LOGIN ==================
+document.getElementById('loginBtn').onclick = async () => {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  if (!username || !password) {
+    document.getElementById('loginError').textContent = "නම සහ මුරපදය ඇතුළත් කරන්න";
+    return;
+  }
+  const params = new URLSearchParams({ action: 'login', username, password });
+  try {
+    const res = await fetch(API_URL + "?" + params.toString());
+    const json = await res.json();
+    if (json.success) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      await loadConfig();
+      fetchStock();
+    } else {
+      document.getElementById('loginError').textContent = json.message;
+    }
+  } catch (err) {
+    document.getElementById('loginError').textContent = "සම්බන්ධතා දෝෂය";
+  }
+};
+
+async function loadConfig() {
+  try {
+    const res = await fetch(API_URL + "?action=get_config");
+    const json = await res.json();
+    if (json.success && json.config) {
+      defaultCourier = parseFloat(json.config.DefaultCourier) || 450;
+    }
+    courierChargeEl.value = defaultCourier;
+  } catch (e) { /* ignore */ }
+}
+
+// ================== SETTINGS ==================
+function openSettings() {
+  document.getElementById('newDefaultCourier').value = courierChargeEl.value;
+  document.getElementById('settingsModal').style.display = 'flex';
+}
+function closeSettings() {
+  document.getElementById('settingsModal').style.display = 'none';
+}
+async function saveSettings() {
+  const newPassword = document.getElementById('newPassword').value.trim();
+  const newCourier = parseFloat(document.getElementById('newDefaultCourier').value);
+  const params = new URLSearchParams({ action: 'update_config', newPassword, defaultCourier: newCourier });
+  try {
+    const res = await fetch(API_URL, { method: 'POST', body: params });
+    const json = await res.json();
+    if (json.success) {
+      alert(json.message);
+      closeSettings();
+      defaultCourier = newCourier || defaultCourier;
+      courierChargeEl.value = defaultCourier;
+    } else {
+      alert(json.message);
+    }
+  } catch (err) { alert("දෝෂය: " + err.message); }
+}
+
+// ================== STOCK DATA & PAGINATION ==================
 async function fetchStock() {
   showStockMsg("පූරණය වෙමින්...");
   try {
@@ -309,13 +402,12 @@ function filterStock() {
   renderStockTable();
   updateStockStats(filteredStock);
 }
-
 searchStockBox.addEventListener('input', () => {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(filterStock, 300);
 });
 
-// ======================== STOCK CRUD ========================
+// ================== STOCK CRUD ==================
 async function callStockApi(action) {
   const id = stockIdInp.value.trim(), name = stockNameInp.value.trim(), price = stockPriceInp.value, qty = stockQtyInp.value;
   if (action !== 'delete' && action !== 'backup') {
@@ -343,9 +435,7 @@ async function callStockApi(action) {
     } else showStockMsg(json.message, true);
   } catch (err) { showStockMsg("සම්බන්ධතා දෝෂය", true); }
 }
-
 function clearStockForm() { stockIdInp.value = stockNameInp.value = stockPriceInp.value = stockQtyInp.value = ""; }
-
 function exportCSV() {
   if (!stockData.length) { showStockMsg("උපස්ථ කිරීමට දත්ත නැත", true); return; }
   let csvRows = [["ID","Name","Price","Quantity"]];
@@ -355,7 +445,6 @@ function exportCSV() {
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `stock_backup_${new Date().toISOString().slice(0,19)}.csv`; a.click();
   showStockMsg("CSV බාගත කළා");
 }
-
 document.getElementById('addBtn').onclick = () => callStockApi('add');
 document.getElementById('updateBtn').onclick = () => callStockApi('update');
 document.getElementById('deleteBtn').onclick = () => { if(stockIdInp.value && confirm("මකන්නද?")) callStockApi('delete'); else showStockMsg("මැකීමට ID තෝරන්න"); };
@@ -363,7 +452,7 @@ document.getElementById('clearBtn').onclick = clearStockForm;
 document.getElementById('backupSheetBtn').onclick = () => callStockApi('backup');
 document.getElementById('exportCSVBtn').onclick = exportCSV;
 
-// ======================== POS ========================
+// ================== POS ==================
 function updateItemDatalist() {
   const datalist = document.getElementById('itemList');
   datalist.innerHTML = "";
@@ -373,7 +462,6 @@ function updateItemDatalist() {
     datalist.appendChild(opt);
   });
 }
-
 function onItemSelect() {
   const selected = itemSearch.value;
   if (!selected) return;
@@ -381,7 +469,6 @@ function onItemSelect() {
   const item = stockData.find(row => String(row[0]) === idPart);
   if (item) itemSearch.value = `${item[0]} - ${item[1]} (රු.${item[2]})`;
 }
-
 document.getElementById('addToCartBtn').onclick = () => {
   const qty = parseInt(itemQty.value) || 1;
   if (qty <= 0) { showPosMsg("ප්‍රමාණය වැරදියි", true); return; }
@@ -404,7 +491,6 @@ document.getElementById('addToCartBtn').onclick = () => {
   itemSearch.value = ""; itemQty.value = 1;
   showPosMsg("කරත්තයට එකතු කළා");
 };
-
 function renderCart() {
   cartBody.innerHTML = "";
   cart.forEach((item, idx) => {
@@ -420,12 +506,10 @@ function renderCart() {
     cartBody.appendChild(row);
   });
 }
-
 function getStockQty(itemId) {
   const found = stockData.find(row => String(row[0]) === itemId);
   return found ? parseInt(found[3]) || 0 : 0;
 }
-
 function updateCartQty(index, newQty) {
   newQty = parseInt(newQty) || 1;
   const item = cart[index];
@@ -436,14 +520,12 @@ function updateCartQty(index, newQty) {
   renderCart(); updateTotals();
 }
 function removeFromCart(index) { cart.splice(index, 1); renderCart(); updateTotals(); }
-
 function updateTotals() {
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const courier = parseFloat(courierChargeEl.value) || 0;
   subtotalSpan.innerText = `රු. ${subtotal.toFixed(2)}`;
   grandTotalSpan.innerText = `රු. ${(subtotal + courier).toFixed(2)}`;
 }
-
 document.getElementById('confirmSaleBtn').onclick = async function() {
   if (!custName.value.trim()) { showPosMsg("ගනුදෙනුකරුගේ නම අවශ්‍යයි", true); return; }
   if (cart.length === 0) { showPosMsg("කරත්තය හිස්", true); return; }
@@ -466,7 +548,7 @@ document.getElementById('confirmSaleBtn').onclick = async function() {
     if (json.success) {
       showPosMsg(`විකිණීම සාර්ථකයි! Sale ID: ${json.saleId}`);
       custName.value = custAddress.value = custPhone.value = "";
-      cart = []; renderCart(); courierChargeEl.value = 0; updateTotals();
+      cart = []; renderCart(); courierChargeEl.value = defaultCourier; updateTotals();
       if (json.data) {
         stockData = json.data;
         filteredStock = stockData;
@@ -477,7 +559,7 @@ document.getElementById('confirmSaleBtn').onclick = async function() {
   } catch (err) { showPosMsg("සම්බන්ධතා දෝෂය", true); }
 };
 
-// ======================== SALES HISTORY + ACTIONS ========================
+// ================== SALES HISTORY + ACTIONS ==================
 document.getElementById('searchSaleBtn').onclick = async function() {
   const term = searchSaleInput.value.trim();
   const params = new URLSearchParams({ action: 'get_sales', customerName: term });
@@ -488,7 +570,6 @@ document.getElementById('searchSaleBtn').onclick = async function() {
     renderSalesHistory(json.data);
   } catch (err) { alert("දෝෂය: " + err.message); }
 };
-
 function renderSalesHistory(data) {
   salesHistoryBody.innerHTML = "";
   if (!data.length) {
@@ -511,41 +592,32 @@ function renderSalesHistory(data) {
       </td>
     `;
     row.onclick = (e) => {
-      if (e.target.tagName !== 'INPUT' && !e.target.closest('button')) {
-        viewBill(sale.SaleID);
-      }
+      if (e.target.tagName !== 'INPUT' && !e.target.closest('button')) viewBill(sale.SaleID);
     };
     salesHistoryBody.appendChild(row);
   });
   const allVisible = document.querySelectorAll('.saleCheckbox');
-  const allChecked = allVisible.length > 0 && Array.from(allVisible).every(cb => cb.checked);
-  document.getElementById('selectAllCheckbox').checked = allChecked;
+  document.getElementById('selectAllCheckbox').checked = allVisible.length > 0 && Array.from(allVisible).every(cb => cb.checked);
 }
-
 function handleCheckboxToggle(event) {
   const saleId = event.target.dataset.saleid;
-  if (event.target.checked) selectedSales.add(saleId);
-  else selectedSales.delete(saleId);
+  event.target.checked ? selectedSales.add(saleId) : selectedSales.delete(saleId);
   document.getElementById('selectAllCheckbox').checked = 
     document.querySelectorAll('.saleCheckbox').length > 0 && 
     Array.from(document.querySelectorAll('.saleCheckbox')).every(cb => cb.checked);
 }
-
 function toggleAllCheckboxes(master) {
   document.querySelectorAll('.saleCheckbox').forEach(cb => {
     cb.checked = master.checked;
-    if (master.checked) selectedSales.add(cb.dataset.saleid);
-    else selectedSales.delete(cb.dataset.saleid);
+    master.checked ? selectedSales.add(cb.dataset.saleid) : selectedSales.delete(cb.dataset.saleid);
   });
 }
-
 function clearSelection() {
   selectedSales.clear();
   document.querySelectorAll('.saleCheckbox').forEach(cb => cb.checked = false);
   document.getElementById('selectAllCheckbox').checked = false;
 }
 
-// Delete sale with stock restore
 async function deleteSale(saleId) {
   if (!confirm(`"${saleId}" බිල්පත මකා තොග යළි එක් කරන්නද?`)) return;
   const params = new URLSearchParams({ action: 'delete_sale', saleId });
@@ -561,23 +633,17 @@ async function deleteSale(saleId) {
         updateStockStats(filteredStock);
         updateItemDatalist();
       }
-      // Refresh sales history
       document.getElementById('searchSaleBtn').click();
-    } else {
-      alert(json.message);
-    }
+    } else alert(json.message);
   } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// Comment modal
 function openCommentModal(saleId, currentComment) {
   document.getElementById('commentSaleId').value = saleId;
   document.getElementById('commentText').value = currentComment || '';
   document.getElementById('commentModal').style.display = 'flex';
 }
-function closeCommentModal() {
-  document.getElementById('commentModal').style.display = 'none';
-}
+function closeCommentModal() { document.getElementById('commentModal').style.display = 'none'; }
 async function saveComment() {
   const saleId = document.getElementById('commentSaleId').value;
   const comment = document.getElementById('commentText').value;
@@ -587,15 +653,12 @@ async function saveComment() {
     const json = await res.json();
     if (json.success) {
       closeCommentModal();
-      // refresh sales list to show updated comment (optional)
       document.getElementById('searchSaleBtn').click();
-    } else {
-      alert(json.message);
-    }
+    } else alert(json.message);
   } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// View bill (now with logo placeholder)
+// ================== VIEW BILL & PRINT ==================
 async function viewBill(saleId) {
   const params = new URLSearchParams({ action: 'get_sale', saleId });
   try {
@@ -603,7 +666,7 @@ async function viewBill(saleId) {
     const json = await res.json();
     if (!json.success) { alert(json.message); return; }
     const { customer, items } = json;
-    let html = `<img class="logo-print" src="https://via.placeholder.com/120x60?text=+LOGO" alt="Logo">`; // Placeholder – change URL to your logo
+    let html = `<img class="logo-print" src="https://via.placeholder.com/120x60?text=+LOGO" alt="Logo">`;
     html += `<p><strong>ගනුදෙනුකරු:</strong> ${escapeHtml(customer.name || '')}<br>
                 <strong>ලිපිනය:</strong> ${escapeHtml(customer.address || '')}<br>
                 <strong>දුරකතන:</strong> ${escapeHtml(customer.phone || '')}</p>
@@ -620,7 +683,6 @@ async function viewBill(saleId) {
   } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// Multi-print (unchanged except logo is not added per mini-bill – keep as is)
 async function printSelectedBills() {
   if (selectedSales.size === 0) { alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න."); return; }
   const saleIds = Array.from(selectedSales);
@@ -657,14 +719,19 @@ function closeModal() {
   document.getElementById('billModal').style.display = 'none';
 }
 
+// ================== TAB SWITCHING ==================
 function switchTab(tabName) {
   document.getElementById('tabStock').classList.toggle('active', tabName === 'stock');
   document.getElementById('tabPOS').classList.toggle('active', tabName === 'pos');
   document.getElementById('panelStock').classList.toggle('active', tabName === 'stock');
   document.getElementById('panelPOS').classList.toggle('active', tabName === 'pos');
+  if (tabName === 'pos') {
+    if (courierChargeEl.value === '' || parseFloat(courierChargeEl.value) === 0) {
+      courierChargeEl.value = defaultCourier;
+    }
+    updateTotals();
+  }
 }
-
-fetchStock();
 </script>
 </body>
 </html>

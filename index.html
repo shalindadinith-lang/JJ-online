@@ -55,7 +55,6 @@
       #billModal, #billModal * { visibility: visible; }
       #billModal { position: absolute; left:0; top:0; width:100%; height:auto; background:white; }
       .modal { box-shadow:none; width:100%; max-width:100%; margin:0; padding:5mm; }
-      /* Hide everything with no-print class */
       .no-print { display: none !important; }
       .bill-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; page-break-inside: avoid; }
       .mini-bill { border: 1px solid #000; padding: 5mm; font-size: 9pt; background: white; break-inside: avoid; }
@@ -165,6 +164,7 @@
         <input type="text" id="searchSaleInput" placeholder="Sale ID හෝ ගනුදෙනුකරු නම">
         <button id="searchSaleBtn">🔍 සොයන්න</button>
         <button id="printSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="printSelectedBills()">🖨️ තෝරාගත් බිල්පත් මුද්‍රණය</button>
+        <button id="downloadSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="downloadSelectedBills()">📥 Sheet බාගන්න</button>
         <button id="clearSelectionBtn" class="btn-gray" style="margin-left:5px;" onclick="clearSelection()">🧹 සලකුණු මකන්න</button>
       </div>
       <table id="salesHistoryTable">
@@ -215,7 +215,7 @@
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbxPt9lDYP0X-mpv2x2fQiAcYhM9KRFWUD_lw7WOGK7s5fnYrUNCq7xFmSd5FW8HTXG1/exec"; // <-- ඔබේ URL එක දමන්න
+const API_URL = "https://script.google.com/macros/s/AKfycbxys34FCkusZM40vFobuvEbo2GZZWUQTCnXMx7ak7Htet9yN2hVj7yByROK5Yv3msfr/exec"; // <-- ඔබේ URL එක දමන්න
 
 let stockData = [], filteredStock = [], cart = [], selectedSales = new Set();
 let defaultCourier = 450;
@@ -665,7 +665,7 @@ async function viewBill(saleId) {
     const json = await res.json();
     if (!json.success) { alert(json.message); return; }
     const { customer, items } = json;
-    let html = `<img class="logo-print" src="https://via.placeholder.com/120x60?text=+LOGO" alt="Logo">`;
+    let html = `<img class="logo-print" src="https://i.postimg.cc/7Y8D56Py/Blue-and-Orange-Minimalist-Gaming-Laptop-Sale-Instagram-Post-(16).png" alt="Logo">`;
     html += `<p><strong>Customer:</strong> ${escapeHtml(customer.name || '')}<br>
                 <strong>Address:</strong> ${escapeHtml(customer.address || '')}<br>
                 <strong>Telephone Number:</strong> ${escapeHtml(customer.phone || '')}</p>
@@ -710,6 +710,77 @@ async function printSelectedBills() {
     modal.style.display = 'flex';
     setTimeout(() => { window.print(); }, 300);
   } catch (err) { alert("Error: " + err.message); }
+}
+
+// ================== DOWNLOAD SELECTED BILLS AS CSV ==================
+async function downloadSelectedBills() {
+  if (selectedSales.size === 0) {
+    alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න.");
+    return;
+  }
+  const saleIds = Array.from(selectedSales);
+  const csvHeader = [
+    "SaleID", "Date", "CustomerName", "Address", "Phone",
+    "ItemID", "ItemName", "Price", "Qty", "ItemTotal",
+    "Subtotal", "Courier", "GrandTotal"
+  ];
+  const csvRows = [csvHeader];
+
+  // Fetch each sale's full details
+  for (const id of saleIds) {
+    try {
+      const params = new URLSearchParams({ action: 'get_sale', saleId: id });
+      const res = await fetch(API_URL + "?" + params.toString());
+      const json = await res.json();
+      if (!json.success) continue;
+
+      const { customer, items } = json;
+      const date = customer.Timestamp ? new Date(customer.Timestamp).toLocaleString('si-LK') : '';
+      const customerName = customer.name || '';
+      const address = customer.address || '';
+      const phone = customer.phone || '';
+      const subtotal = parseFloat(customer.subtotal) || 0;
+      const courier = parseFloat(customer.courier) || 0;
+      const grandTotal = parseFloat(customer.grandTotal) || 0;
+
+      if (items && items.length > 0) {
+        items.forEach(item => {
+          csvRows.push([
+            id,
+            date,
+            customerName,
+            address,
+            phone,
+            item.id || '',
+            item.name || '',
+            item.price || 0,
+            item.qty || 0,
+            item.total || 0,
+            subtotal,
+            courier,
+            grandTotal
+          ]);
+        });
+      } else {
+        // Fallback: if no items (shouldn't happen), push empty row
+        csvRows.push([id, date, customerName, address, phone, '', '', '', '', '', subtotal, courier, grandTotal]);
+      }
+    } catch (err) {
+      console.error(`Error fetching sale ${id}`, err);
+    }
+  }
+
+  // Build CSV string with BOM for UTF-8
+  const csvContent = "\uFEFF" + csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `selected_bills_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function closeModal() {

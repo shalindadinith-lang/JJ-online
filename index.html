@@ -27,6 +27,7 @@
     .btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
     button { background: #1e466e; border: none; color: white; padding: 10px 22px; border-radius: 40px; cursor: pointer; font-weight: bold; transition: 0.2s; }
     button:hover { background: #0f2d4a; transform: translateY(-1px); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
     .btn-green { background: #2c6e2c; } .btn-green:hover { background: #1e4f1e; }
     .btn-red { background: #b22234; } .btn-red:hover { background: #8b1a1a; }
     .btn-gray { background: #5a6874; } .btn-gray:hover { background: #3d484e; }
@@ -49,7 +50,6 @@
     .logo-print { display: none; }
     .modal .logo-print { display: block; max-width: 120px; margin: 0 auto 10px; }
 
-    /* ---------- Print styles ---------- */
     @media print {
       body * { visibility: hidden; }
       #billModal, #billModal * { visibility: visible; }
@@ -78,7 +78,7 @@
   <p id="loginError"></p>
 </div>
 
-<!-- MAIN APP (hidden initially) -->
+<!-- MAIN APP -->
 <div id="mainApp">
 <div class="container">
   <div class="header-bar">
@@ -180,6 +180,7 @@
         </thead>
         <tbody id="salesHistoryBody"></tbody>
       </table>
+      <div class="pagination" id="salesPaginationControls"></div>
     </div>
   </div>
 </div>
@@ -215,12 +216,15 @@
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbwFta4gGtOhEjNpmmCXC28ZWGvkCmCdY1bjD5w2zDF4poaiHtWudPC_9w6M4AwHb0q8/exec"; // <-- ඔබේ URL එක දමන්න
+const API_URL = "https://script.google.com/macros/s/AKfycbxPDATIbpAmy0BNNXKAaAutDbylFkfpXOf5-BSHBX0GcRFxgutp5b8R3etIT_cpG1-9/exec";
 
 let stockData = [], filteredStock = [], cart = [], selectedSales = new Set();
+let salesHistoryData = [];
 let defaultCourier = 450;
 const ROWS_PER_PAGE = 50;
-let currentPage = 1, searchTimeout;
+const SALES_PER_PAGE = 20;
+let currentPage = 1, salesCurrentPage = 1, searchTimeout;
+const billCache = {}; // Cache for individual bills
 
 // DOM Elements
 const stockIdInp = document.getElementById('stockId');
@@ -233,6 +237,7 @@ const stockMsgBox = document.getElementById('msgBoxStock');
 const totalQtySpan = document.getElementById('totalQty');
 const totalValueSpan = document.getElementById('totalValue');
 const paginationDiv = document.getElementById('paginationControls');
+const salesPaginationDiv = document.getElementById('salesPaginationControls');
 const cartBody = document.getElementById('cartBody');
 const subtotalSpan = document.getElementById('subtotal');
 const courierChargeEl = document.getElementById('courierCharge');
@@ -240,6 +245,7 @@ const grandTotalSpan = document.getElementById('grandTotal');
 const posMsg = document.getElementById('posMsg');
 const salesHistoryBody = document.getElementById('salesHistoryBody');
 const searchSaleInput = document.getElementById('searchSaleInput');
+const confirmSaleBtn = document.getElementById('confirmSaleBtn');
 
 function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
 function showStockMsg(msg, isError = false) {
@@ -250,6 +256,23 @@ function showPosMsg(msg, isErr = false) {
   posMsg.innerHTML = isErr ? `❌ ${msg}` : `✅ ${msg}`;
   posMsg.style.color = isErr ? "#b22234" : "#1e466e";
 }
+
+// ================== STOCK CACHE HELPERS ==================
+function saveStockCache() {
+  try { localStorage.setItem('stockCache', JSON.stringify(stockData)); } catch(e){}
+}
+function loadStockCache() {
+  try {
+    const cached = localStorage.getItem('stockCache');
+    if (cached) {
+      stockData = JSON.parse(cached);
+      filteredStock = stockData;
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+function clearStockCache() { localStorage.removeItem('stockCache'); }
 
 // ================== LOGIN ==================
 document.getElementById('loginBtn').onclick = async () => {
@@ -267,7 +290,15 @@ document.getElementById('loginBtn').onclick = async () => {
       document.getElementById('loginScreen').style.display = 'none';
       document.getElementById('mainApp').style.display = 'block';
       await loadConfig();
-      fetchStock();
+      if (!loadStockCache()) {
+        await fetchStock();
+      } else {
+        renderStockTable();
+        updateStockStats(filteredStock);
+        checkLowStock();
+        updateItemDatalist();
+        showStockMsg(`Cache වෙතින් පූරණය විය (${stockData.length})`);
+      }
     } else {
       document.getElementById('loginError').textContent = json.message;
     }
@@ -322,6 +353,7 @@ async function fetchStock() {
     if (!json.success) throw new Error(json.message);
     stockData = json.data;
     filteredStock = stockData;
+    saveStockCache();
     currentPage = 1;
     renderStockTable();
     updateStockStats(filteredStock);
@@ -424,6 +456,7 @@ async function callStockApi(action) {
       if (json.data) {
         stockData = json.data;
         filteredStock = stockData;
+        saveStockCache();
         searchStockBox.value = "";
         currentPage = 1;
         renderStockTable();
@@ -525,7 +558,8 @@ function updateTotals() {
   subtotalSpan.innerText = `රු. ${subtotal.toFixed(2)}`;
   grandTotalSpan.innerText = `රු. ${(subtotal + courier).toFixed(2)}`;
 }
-document.getElementById('confirmSaleBtn').onclick = async function() {
+
+confirmSaleBtn.onclick = async function() {
   if (!custName.value.trim()) { showPosMsg("ගනුදෙනුකරුගේ නම අවශ්‍යයි", true); return; }
   if (cart.length === 0) { showPosMsg("කරත්තය හිස්", true); return; }
   const courier = parseFloat(courierChargeEl.value) || 0;
@@ -533,6 +567,8 @@ document.getElementById('confirmSaleBtn').onclick = async function() {
     const available = getStockQty(item.id);
     if (item.qty > available) { showPosMsg(`"${item.name}" සඳහා තොගය ප්‍රමාණවත් නොවේ. ඇත්තේ: ${available}`, true); return; }
   }
+  confirmSaleBtn.disabled = true;
+  confirmSaleBtn.textContent = "⏳ සැකසෙමින්...";
   const saleData = new URLSearchParams({
     action: 'sell',
     customerName: custName.value.trim(),
@@ -551,32 +587,51 @@ document.getElementById('confirmSaleBtn').onclick = async function() {
       if (json.data) {
         stockData = json.data;
         filteredStock = stockData;
+        saveStockCache();
         searchStockBox.value = ""; currentPage = 1;
         renderStockTable(); updateStockStats(filteredStock); updateItemDatalist();
       }
     } else showPosMsg(json.message, true);
   } catch (err) { showPosMsg("සම්බන්ධතා දෝෂය", true); }
+  finally {
+    confirmSaleBtn.disabled = false;
+    confirmSaleBtn.textContent = "✅ බිල්පත තහවුරු කරන්න";
+  }
 };
 
-// ================== SALES HISTORY + ACTIONS ==================
-document.getElementById('searchSaleBtn').onclick = async function() {
-  const term = searchSaleInput.value.trim();
-  const params = new URLSearchParams({ action: 'get_sales', customerName: term });
-  try {
-    const res = await fetch(API_URL + "?" + params.toString());
-    const json = await res.json();
-    if (!json.success) throw new Error(json.message);
-    renderSalesHistory(json.data);
-  } catch (err) { alert("දෝෂය: " + err.message); }
-};
-function renderSalesHistory(data) {
+// ================== SALES HISTORY + PAGINATION ==================
+function renderSalesPagination() {
+  salesPaginationDiv.innerHTML = "";
+  if (!salesHistoryData.length) return;
+  const totalPages = Math.ceil(salesHistoryData.length / SALES_PER_PAGE);
+  if (totalPages <= 1) return;
+  const prevBtn = document.createElement('button');
+  prevBtn.textContent = 'පෙර'; prevBtn.disabled = salesCurrentPage === 1;
+  prevBtn.onclick = () => { if (salesCurrentPage > 1) { salesCurrentPage--; renderSalesPage(); } };
+  salesPaginationDiv.appendChild(prevBtn);
+  for (let i = 1; i <= totalPages; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    if (i === salesCurrentPage) btn.classList.add('active-page');
+    btn.onclick = () => { salesCurrentPage = i; renderSalesPage(); };
+    salesPaginationDiv.appendChild(btn);
+  }
+  const nextBtn = document.createElement('button');
+  nextBtn.textContent = 'මීළඟ'; nextBtn.disabled = salesCurrentPage === totalPages;
+  nextBtn.onclick = () => { if (salesCurrentPage < totalPages) { salesCurrentPage++; renderSalesPage(); } };
+  salesPaginationDiv.appendChild(nextBtn);
+}
+
+function renderSalesPage() {
   salesHistoryBody.innerHTML = "";
-  if (!data.length) {
+  const start = (salesCurrentPage - 1) * SALES_PER_PAGE;
+  const pageData = salesHistoryData.slice(start, start + SALES_PER_PAGE);
+  if (!pageData.length) {
     salesHistoryBody.innerHTML = "<tr><td colspan='6'>ප්‍රතිඵල නැත</td></tr>";
     document.getElementById('selectAllCheckbox').checked = false;
     return;
   }
-  data.forEach(sale => {
+  pageData.forEach(sale => {
     const row = document.createElement('tr');
     const isChecked = selectedSales.has(sale.SaleID);
     row.innerHTML = `
@@ -597,7 +652,22 @@ function renderSalesHistory(data) {
   });
   const allVisible = document.querySelectorAll('.saleCheckbox');
   document.getElementById('selectAllCheckbox').checked = allVisible.length > 0 && Array.from(allVisible).every(cb => cb.checked);
+  renderSalesPagination();
 }
+
+document.getElementById('searchSaleBtn').onclick = async function() {
+  const term = searchSaleInput.value.trim();
+  const params = new URLSearchParams({ action: 'get_sales', customerName: term });
+  try {
+    const res = await fetch(API_URL + "?" + params.toString());
+    const json = await res.json();
+    if (!json.success) throw new Error(json.message);
+    salesHistoryData = json.data;
+    salesCurrentPage = 1;
+    renderSalesPage();
+  } catch (err) { alert("දෝෂය: " + err.message); }
+};
+
 function handleCheckboxToggle(event) {
   const saleId = event.target.dataset.saleid;
   event.target.checked ? selectedSales.add(saleId) : selectedSales.delete(saleId);
@@ -628,6 +698,7 @@ async function deleteSale(saleId) {
       if (json.data) {
         stockData = json.data;
         filteredStock = stockData;
+        saveStockCache();
         renderStockTable();
         updateStockStats(filteredStock);
         updateItemDatalist();
@@ -657,13 +728,23 @@ async function saveComment() {
   } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// ================== VIEW BILL (English only) ==================
-async function viewBill(saleId) {
+// ================== BILL CACHE & FETCH ==================
+async function getSaleData(saleId) {
+  if (billCache[saleId]) return billCache[saleId];
   const params = new URLSearchParams({ action: 'get_sale', saleId });
+  const res = await fetch(API_URL + "?" + params.toString());
+  const json = await res.json();
+  if (json.success) {
+    billCache[saleId] = json;
+    return json;
+  }
+  throw new Error(json.message || 'Failed to fetch bill');
+}
+
+// ================== VIEW BILL ==================
+async function viewBill(saleId) {
   try {
-    const res = await fetch(API_URL + "?" + params.toString());
-    const json = await res.json();
-    if (!json.success) { alert(json.message); return; }
+    const json = await getSaleData(saleId);
     const { customer, items } = json;
     let html = `<img class="logo-print" src="https://i.postimg.cc/7Y8D56Py/Blue-and-Orange-Minimalist-Gaming-Laptop-Sale-Instagram-Post-(16).png" alt="Logo">`;
     html += `<p><strong>Customer:</strong> ${escapeHtml(customer.name || '')}<br>
@@ -684,15 +765,11 @@ async function viewBill(saleId) {
 async function printSelectedBills() {
   if (selectedSales.size === 0) { alert("Please select at least one bill to print."); return; }
   const saleIds = Array.from(selectedSales);
-  const billPromises = saleIds.map(id => {
-    const params = new URLSearchParams({ action: 'get_sale', saleId: id });
-    return fetch(API_URL + "?" + params.toString()).then(res => res.json());
-  });
   try {
-    const results = await Promise.all(billPromises);
+    const results = await Promise.all(saleIds.map(id => getSaleData(id).catch(() => null)));
     let combinedHtml = '';
     results.forEach((json, index) => {
-      if (!json.success) return;
+      if (!json || !json.success) return;
       const { customer, items } = json;
       combinedHtml += `
         <div class="mini-bill">
@@ -705,9 +782,8 @@ async function printSelectedBills() {
         </div>
       `;
     });
-    const modal = document.getElementById('billModal');
     document.getElementById('billContent').innerHTML = `<div class="bill-grid">${combinedHtml}</div>`;
-    modal.style.display = 'flex';
+    document.getElementById('billModal').style.display = 'flex';
     setTimeout(() => { window.print(); }, 300);
   } catch (err) { alert("Error: " + err.message); }
 }
@@ -726,14 +802,9 @@ async function downloadSelectedBills() {
   ];
   const csvRows = [csvHeader];
 
-  // Fetch each sale's full details
   for (const id of saleIds) {
     try {
-      const params = new URLSearchParams({ action: 'get_sale', saleId: id });
-      const res = await fetch(API_URL + "?" + params.toString());
-      const json = await res.json();
-      if (!json.success) continue;
-
+      const json = await getSaleData(id);
       const { customer, items } = json;
       const date = customer.Timestamp ? new Date(customer.Timestamp).toLocaleString('si-LK') : '';
       const customerName = customer.name || '';
@@ -746,23 +817,13 @@ async function downloadSelectedBills() {
       if (items && items.length > 0) {
         items.forEach(item => {
           csvRows.push([
-            id,
-            date,
-            customerName,
-            address,
-            phone,
-            item.id || '',
-            item.name || '',
-            item.price || 0,
-            item.qty || 0,
-            item.total || 0,
-            subtotal,
-            courier,
-            grandTotal
+            id, date, customerName, address, phone,
+            item.id || '', item.name || '', item.price || 0,
+            item.qty || 0, item.total || 0,
+            subtotal, courier, grandTotal
           ]);
         });
       } else {
-        // Fallback: if no items (shouldn't happen), push empty row
         csvRows.push([id, date, customerName, address, phone, '', '', '', '', '', subtotal, courier, grandTotal]);
       }
     } catch (err) {
@@ -770,7 +831,6 @@ async function downloadSelectedBills() {
     }
   }
 
-  // Build CSV string with BOM for UTF-8
   const csvContent = "\uFEFF" + csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);

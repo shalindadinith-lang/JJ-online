@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📦 ස්මාර්ට් තොග + POS</title>
+  <title>Smart Stock + POS</title>
   <style>
     * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, Arial, sans-serif; }
     body { background: #eef2f7; margin: 0; padding: 20px; }
@@ -49,12 +49,14 @@
     .logo-print { display: none; }
     .modal .logo-print { display: block; max-width: 120px; margin: 0 auto 10px; }
 
+    /* ---------- Print styles ---------- */
     @media print {
       body * { visibility: hidden; }
       #billModal, #billModal * { visibility: visible; }
       #billModal { position: absolute; left:0; top:0; width:100%; height:auto; background:white; }
       .modal { box-shadow:none; width:100%; max-width:100%; margin:0; padding:5mm; }
-      .modal h2, .modal button { display: none; }
+      /* Hide everything with no-print class */
+      .no-print { display: none !important; }
       .bill-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8mm; page-break-inside: avoid; }
       .mini-bill { border: 1px solid #000; padding: 5mm; font-size: 9pt; background: white; break-inside: avoid; }
       .mini-bill .bill-header { font-weight:bold; font-size:10pt; margin-bottom:2mm; }
@@ -63,9 +65,6 @@
       .mini-bill .bill-subtotal,
       .mini-bill .bill-courier { font-size: 8pt; margin-top: 1mm; }
       .mini-bill .bill-total { font-weight:bold; text-align:right; margin-top: 2mm; }
-      .single-bill-print .modal h2 { display: block; }
-      .single-bill-print .modal button { display: inline-block; }
-      .single-bill-print .logo-print { display: block; }
     }
   </style>
 </head>
@@ -189,9 +188,9 @@
 <!-- MODALS -->
 <div id="billModal" class="modal-overlay">
   <div class="modal">
-    <h2>🧾  Bill Details</h2>
+    <h2 class="no-print">🧾 Bill Details</h2>
     <div id="billContent"></div>
-    <button onclick="closeModal()" style="margin-top:15px;">වසන්න</button>
+    <button class="no-print" onclick="closeModal()" style="margin-top:15px;">Close</button>
   </div>
 </div>
 <div id="commentModal" class="modal-overlay">
@@ -658,7 +657,7 @@ async function saveComment() {
   } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// ================== VIEW BILL & PRINT ==================
+// ================== VIEW BILL (English only) ==================
 async function viewBill(saleId) {
   const params = new URLSearchParams({ action: 'get_sale', saleId });
   try {
@@ -669,22 +668,21 @@ async function viewBill(saleId) {
     let html = `<img class="logo-print" src="https://via.placeholder.com/120x60?text=+LOGO" alt="Logo">`;
     html += `<p><strong>Customer:</strong> ${escapeHtml(customer.name || '')}<br>
                 <strong>Address:</strong> ${escapeHtml(customer.address || '')}<br>
-                <strong>Telephone number:</strong> ${escapeHtml(customer.phone || '')}</p>
-                <table><thead><tr><th>Item</th><th>Price</th><th>quantity</th><th>Total Amount</th></tr></thead><tbody>`;
-    items.forEach(it => html += `<tr><td>${escapeHtml(it.name)}</td><td>රු. ${it.price}</td><td>${it.qty}</td><td>රු. ${it.total}</td></tr>`);
+                <strong>Telephone Number:</strong> ${escapeHtml(customer.phone || '')}</p>
+                <table><thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead><tbody>`;
+    items.forEach(it => html += `<tr><td>${escapeHtml(it.name)}</td><td>Rs. ${it.price}</td><td>${it.qty}</td><td>Rs. ${it.total}</td></tr>`);
     html += `</tbody></table>
-             <p><strong>Subtotal:</strong> රු. ${customer.subtotal}<br>
-             <strong>Courier:</strong> රු. ${customer.courier}<br>
-             <strong>Grand Total:</strong> රු. ${customer.grandTotal}</p>
-             <button onclick="window.print()" style="margin-right:10px;">🖨️ මුද්‍රණය කරන්න</button>`;
+             <p><strong>Subtotal:</strong> Rs. ${customer.subtotal}<br>
+             <strong>Courier:</strong> Rs. ${customer.courier}<br>
+             <strong>Grand Total:</strong> Rs. ${customer.grandTotal}</p>
+             <button class="no-print" onclick="window.print()" style="margin-right:10px;">🖨️ Print</button>`;
     document.getElementById('billContent').innerHTML = html;
-    document.getElementById('billModal').classList.add('single-bill-print');
     document.getElementById('billModal').style.display = 'flex';
-  } catch (err) { alert("දෝෂය: " + err.message); }
+  } catch (err) { alert("Error: " + err.message); }
 }
 
 async function printSelectedBills() {
-  if (selectedSales.size === 0) { alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න."); return; }
+  if (selectedSales.size === 0) { alert("Please select at least one bill to print."); return; }
   const saleIds = Array.from(selectedSales);
   const billPromises = saleIds.map(id => {
     const params = new URLSearchParams({ action: 'get_sale', saleId: id });
@@ -700,19 +698,18 @@ async function printSelectedBills() {
         <div class="mini-bill">
           <div class="bill-header">Sale ID: ${saleIds[index]}</div>
           <div class="bill-customer">${escapeHtml(customer.name || '')}</div>
-          <div class="bill-items">${items.map(it => `${it.name} x${it.qty} රු.${it.total}`).join('<br>')}</div>
-          <div class="bill-subtotal">උප එකතුව: රු. ${parseFloat(customer.subtotal).toFixed(2)}</div>
-          <div class="bill-courier">කුවර් ගාස්තු: රු. ${parseFloat(customer.courier).toFixed(2)}</div>
-          <div class="bill-total">ග්‍රෑන්ඩ් ටෝටල්: රු. ${parseFloat(customer.grandTotal).toFixed(2)}</div>
+          <div class="bill-items">${items.map(it => `${it.name} x${it.qty} Rs.${it.total}`).join('<br>')}</div>
+          <div class="bill-subtotal">Subtotal: Rs. ${parseFloat(customer.subtotal).toFixed(2)}</div>
+          <div class="bill-courier">Courier: Rs. ${parseFloat(customer.courier).toFixed(2)}</div>
+          <div class="bill-total">Grand Total: Rs. ${parseFloat(customer.grandTotal).toFixed(2)}</div>
         </div>
       `;
     });
     const modal = document.getElementById('billModal');
-    modal.classList.remove('single-bill-print');
     document.getElementById('billContent').innerHTML = `<div class="bill-grid">${combinedHtml}</div>`;
     modal.style.display = 'flex';
     setTimeout(() => { window.print(); }, 300);
-  } catch (err) { alert("දෝෂය: " + err.message); }
+  } catch (err) { alert("Error: " + err.message); }
 }
 
 function closeModal() {

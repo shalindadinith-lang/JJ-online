@@ -189,7 +189,7 @@
 <!-- MODALS -->
 <div id="billModal" class="modal-overlay">
   <div class="modal">
-    <h2>🧾 බිල්පත් විස්තර</h2>
+    <h2>🧾  Bill Details</h2>
     <div id="billContent"></div>
     <button onclick="closeModal()" style="margin-top:15px;">වසන්න</button>
   </div>
@@ -667,15 +667,15 @@ async function viewBill(saleId) {
     if (!json.success) { alert(json.message); return; }
     const { customer, items } = json;
     let html = `<img class="logo-print" src="https://via.placeholder.com/120x60?text=+LOGO" alt="Logo">`;
-    html += `<p><strong>ගනුදෙනුකරු:</strong> ${escapeHtml(customer.name || '')}<br>
-                <strong>ලිපිනය:</strong> ${escapeHtml(customer.address || '')}<br>
-                <strong>දුරකතන:</strong> ${escapeHtml(customer.phone || '')}</p>
-                <table><thead><tr><th>අයිතමය</th><th>මිල</th><th>ප්‍රමාණය</th><th>මුළු</th></tr></thead><tbody>`;
+    html += `<p><strong>Customer:</strong> ${escapeHtml(customer.name || '')}<br>
+                <strong>Address:</strong> ${escapeHtml(customer.address || '')}<br>
+                <strong>Telephone number:</strong> ${escapeHtml(customer.phone || '')}</p>
+                <table><thead><tr><th>Item</th><th>Price</th><th>quantity</th><th>Total Amount</th></tr></thead><tbody>`;
     items.forEach(it => html += `<tr><td>${escapeHtml(it.name)}</td><td>රු. ${it.price}</td><td>${it.qty}</td><td>රු. ${it.total}</td></tr>`);
     html += `</tbody></table>
-             <p><strong>උප එකතුව:</strong> රු. ${customer.subtotal}<br>
-             <strong>කුවර්:</strong> රු. ${customer.courier}<br>
-             <strong>ග්‍රෑන්ඩ් ටෝටල්:</strong> රු. ${customer.grandTotal}</p>
+             <p><strong>Subtotal:</strong> රු. ${customer.subtotal}<br>
+             <strong>Courier:</strong> රු. ${customer.courier}<br>
+             <strong>Grand Total:</strong> රු. ${customer.grandTotal}</p>
              <button onclick="window.print()" style="margin-right:10px;">🖨️ මුද්‍රණය කරන්න</button>`;
     document.getElementById('billContent').innerHTML = html;
     document.getElementById('billModal').classList.add('single-bill-print');

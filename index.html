@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Stock + POS (Firebase)</title>
+    <title>Smart Stock + POS (Firebase - No Cache)</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, Arial, sans-serif; }
         body { background: #eef2f7; margin: 0; padding: 20px; }
@@ -283,25 +283,6 @@ function showPosMsg(msg, isErr = false) {
     posMsg.style.color = isErr ? "#b22234" : "#1e466e";
 }
 
-// ================== CACHE HELPERS (FIXED) ==================
-function saveStockCache() {
-    try { localStorage.setItem('stockCache', JSON.stringify(stockData)); } catch(e){}
-}
-function loadStockCache() {
-    try {
-        const cached = localStorage.getItem('stockCache');
-        if (cached) {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                stockData = parsed;
-                filteredStock = stockData;
-                return true;
-            }
-        }
-    } catch(e) {}
-    return false;
-}
-
 // ================== AUTH ==================
 document.getElementById('loginBtn').onclick = async () => {
     const email = document.getElementById('loginEmail').value.trim();
@@ -323,15 +304,8 @@ auth.onAuthStateChanged(async (user) => {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         await loadConfig();
-        if (!loadStockCache()) {
-            await fetchStock();
-        } else {
-            renderStockTable();
-            updateStockStats(filteredStock);
-            checkLowStock();
-            updateItemDatalist();
-            showStockMsg(`Cache වෙතින් පූරණය විය (${stockData.length})`);
-        }
+        // 🔥 Always fetch fresh data from Firestore, no cache
+        await fetchStock();
         await ensureSaleCounter();
     } else {
         document.getElementById('loginScreen').style.display = 'block';
@@ -379,10 +353,10 @@ async function saveSettings() {
     } catch (err) { alert('දෝෂය: ' + err.message); }
 }
 
-// ================== STOCK DATA (BATCH FETCH) ==================
+// ================== STOCK DATA (BATCH FETCH, NO CACHE) ==================
 async function fetchStock() {
     showStockMsg("⏳ දත්ත ලබා ගනිමින්...");
-    stockTableBody.innerHTML = "<tr><td colspan='4'>පූරණය වේ...</td></tr>";
+    stockTableBody.innerHTML = "<tr><td colspan='4'>Database වෙතින් පූරණය වේ...</td></tr>";
     try {
         let allDocs = [];
         let lastDoc = null;
@@ -405,13 +379,12 @@ async function fetchStock() {
             stockData.push([doc.id, data.name, data.price, data.qty]);
         });
         filteredStock = stockData;
-        saveStockCache();
         currentPage = 1;
         renderStockTable();
         updateStockStats(filteredStock);
         checkLowStock();
         updateItemDatalist();
-        showStockMsg(`භාණ්ඩ ${stockData.length} ක් පූරණය කළා`);
+        showStockMsg(`✅ Database වෙතින් භාණ්ඩ ${stockData.length} ක් පූරණය කළා`);
     } catch (err) {
         showStockMsg("දෝෂයකි: " + err.message, true);
     }

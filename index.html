@@ -245,7 +245,7 @@ const ROWS_PER_PAGE = 50;
 const SALES_PER_PAGE = 20;
 let currentPage = 1, salesCurrentPage = 1, searchTimeout;
 const billCache = {};
-let isDeletedView = false; // toggle for trash view
+let isDeletedView = false;
 
 // DOM Elements
 const stockIdInp = document.getElementById('stockId');
@@ -292,7 +292,6 @@ function loadStockCache() {
         const cached = localStorage.getItem('stockCache');
         if (cached) {
             const parsed = JSON.parse(cached);
-            // Only use cache if it is a non-empty array
             if (Array.isArray(parsed) && parsed.length > 0) {
                 stockData = parsed;
                 filteredStock = stockData;
@@ -300,7 +299,7 @@ function loadStockCache() {
             }
         }
     } catch(e) {}
-    return false; // cache empty or invalid -> fetch from Firestore
+    return false;
 }
 
 // ================== AUTH ==================
@@ -333,7 +332,6 @@ auth.onAuthStateChanged(async (user) => {
             updateItemDatalist();
             showStockMsg(`Cache වෙතින් පූරණය විය (${stockData.length})`);
         }
-        // Initialize sale counter if not exists
         await ensureSaleCounter();
     } else {
         document.getElementById('loginScreen').style.display = 'block';
@@ -345,7 +343,6 @@ async function ensureSaleCounter() {
     const counterRef = db.collection('metadata').doc('saleCounter');
     const docSnap = await counterRef.get();
     if (!docSnap.exists) {
-        // Set initial last number to 1309 so first sale ID is jj1310
         await counterRef.set({ lastNumber: 1309 });
     }
 }
@@ -370,32 +367,40 @@ function openSettings() {
     document.getElementById('newDefaultCourier').value = defaultCourier;
     document.getElementById('settingsModal').style.display = 'flex';
 }
-function closeSettings() {
-    document.getElementById('settingsModal').style.display = 'none';
-}
+function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
 async function saveSettings() {
     const newCourier = parseFloat(document.getElementById('newDefaultCourier').value) || 0;
     try {
-        await db.collection('config').doc('default').set({
-            DefaultCourier: newCourier
-        }, { merge: true });
+        await db.collection('config').doc('default').set({ DefaultCourier: newCourier }, { merge: true });
         defaultCourier = newCourier;
         courierChargeEl.value = defaultCourier;
         alert('සැකසුම් සුරකින ලදී');
         closeSettings();
-    } catch (err) {
-        alert('දෝෂය: ' + err.message);
-    }
+    } catch (err) { alert('දෝෂය: ' + err.message); }
 }
 
-// ================== STOCK DATA ==================
+// ================== STOCK DATA (BATCH FETCH) ==================
 async function fetchStock() {
     showStockMsg("⏳ දත්ත ලබා ගනිමින්...");
     stockTableBody.innerHTML = "<tr><td colspan='4'>පූරණය වේ...</td></tr>";
     try {
-        const snapshot = await db.collection('stock').get();
+        let allDocs = [];
+        let lastDoc = null;
+        let hasMore = true;
+        while (hasMore) {
+            let query = db.collection('stock').orderBy('__name__').limit(500);
+            if (lastDoc) query = query.startAfter(lastDoc);
+            const snapshot = await query.get();
+            if (snapshot.empty) {
+                hasMore = false;
+            } else {
+                allDocs.push(...snapshot.docs);
+                lastDoc = snapshot.docs[snapshot.docs.length - 1];
+                if (snapshot.docs.length < 500) hasMore = false;
+            }
+        }
         stockData = [];
-        snapshot.forEach(doc => {
+        allDocs.forEach(doc => {
             const data = doc.data();
             stockData.push([doc.id, data.name, data.price, data.qty]);
         });
@@ -490,55 +495,40 @@ searchStockBox.addEventListener('input', () => {
 // ================== STOCK CRUD ==================
 async function addStock() {
     const id = stockIdInp.value.trim(), name = stockNameInp.value.trim(), price = parseFloat(stockPriceInp.value), qty = parseInt(stockQtyInp.value);
-    if (!id || !name || isNaN(price) || isNaN(qty)) {
-        showStockMsg("සියලු ක්ෂේත්‍ර පුරවන්න", true); return;
-    }
+    if (!id || !name || isNaN(price) || isNaN(qty)) { showStockMsg("සියලු ක්ෂේත්‍ර පුරවන්න", true); return; }
     if (qty < 0) { showStockMsg("ප්‍රමාණය සෘණ විය නොහැක", true); return; }
     try {
         const docRef = db.collection('stock').doc(id);
         const docSnap = await docRef.get();
-        if (docSnap.exists) {
-            showStockMsg("මෙම ID එක දැනටමත් ඇත. තොගයට එකතු කිරීමට 'තොගයට එකතු' බොත්තම භාවිතා කරන්න.", true); return;
-        }
+        if (docSnap.exists) { showStockMsg("මෙම ID එක දැනටමත් ඇත", true); return; }
         await docRef.set({ name, price, qty });
         showStockMsg(`"${id}" එකතු කරන ලදී`);
         clearStockForm();
         await fetchStock();
-    } catch (err) {
-        showStockMsg("දෝෂය: " + err.message, true);
-    }
+    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
 }
 
 async function updateStock() {
     const id = stockIdInp.value.trim(), name = stockNameInp.value.trim(), price = parseFloat(stockPriceInp.value), qty = parseInt(stockQtyInp.value);
-    if (!id || !name || isNaN(price) || isNaN(qty)) {
-        showStockMsg("සියලු ක්ෂේත්‍ර පුරවන්න", true); return;
-    }
+    if (!id || !name || isNaN(price) || isNaN(qty)) { showStockMsg("සියලු ක්ෂේත්‍ර පුරවන්න", true); return; }
     if (qty < 0) { showStockMsg("ප්‍රමාණය සෘණ විය නොහැක", true); return; }
     try {
         const docRef = db.collection('stock').doc(id);
         const docSnap = await docRef.get();
-        if (!docSnap.exists) {
-            showStockMsg("භාණ්ඩය හමු නොවීය", true); return;
-        }
+        if (!docSnap.exists) { showStockMsg("භාණ්ඩය හමු නොවීය", true); return; }
         await docRef.update({ name, price, qty });
-        showStockMsg(`"${id}" යාවත්කාලීන කරන ලදී (නව ප්‍රමාණය: ${qty})`);
+        showStockMsg(`"${id}" යාවත්කාලීන කරන ලදී`);
         clearStockForm();
         await fetchStock();
-    } catch (err) {
-        showStockMsg("දෝෂය: " + err.message, true);
-    }
+    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
 }
 
 async function addToStock() {
     const id = stockIdInp.value.trim();
     const qtyToAdd = parseInt(stockQtyInp.value);
-    if (!id || isNaN(qtyToAdd) || qtyToAdd <= 0) {
-        showStockMsg("ID සහ එකතු කළ යුතු ප්‍රමාණය (ධන) ඇතුළත් කරන්න", true); return;
-    }
+    if (!id || isNaN(qtyToAdd) || qtyToAdd <= 0) { showStockMsg("ID සහ එකතු කළ යුතු ප්‍රමාණය ඇතුළත් කරන්න", true); return; }
     const name = stockNameInp.value.trim();
     const price = parseFloat(stockPriceInp.value);
-
     try {
         const docRef = db.collection('stock').doc(id);
         const docSnap = await docRef.get();
@@ -549,19 +539,15 @@ async function addToStock() {
             if (name) updateData.name = name;
             if (!isNaN(price)) updateData.price = price;
             await docRef.update(updateData);
-            showStockMsg(`"${id}" තොගයට ${qtyToAdd} ක් එකතු කරන ලදී. නව ප්‍රමාණය: ${newQty}`);
+            showStockMsg(`"${id}" තොගයට ${qtyToAdd} ක් එකතු විය. නව ප්‍රමාණය: ${newQty}`);
         } else {
-            if (!name || isNaN(price)) {
-                showStockMsg("නව භාණ්ඩයක් සඳහා නම සහ මිල අවශ්‍යයි", true); return;
-            }
+            if (!name || isNaN(price)) { showStockMsg("නව භාණ්ඩයක් සඳහා නම සහ මිල අවශ්‍යයි", true); return; }
             await docRef.set({ name, price, qty: qtyToAdd });
-            showStockMsg(`"${id}" නව භාණ්ඩයක් ලෙස එකතු කරන ලදී (${qtyToAdd})`);
+            showStockMsg(`"${id}" නව භාණ්ඩයක් ලෙස එකතු කරන ලදී`);
         }
         clearStockForm();
         await fetchStock();
-    } catch (err) {
-        showStockMsg("දෝෂය: " + err.message, true);
-    }
+    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
 }
 
 async function deleteStock() {
@@ -573,9 +559,7 @@ async function deleteStock() {
         showStockMsg("මකා දැමුවා");
         clearStockForm();
         await fetchStock();
-    } catch (err) {
-        showStockMsg("දෝෂය: " + err.message, true);
-    }
+    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
 }
 
 function clearStockForm() { stockIdInp.value = stockNameInp.value = stockPriceInp.value = stockQtyInp.value = ""; }
@@ -605,9 +589,7 @@ async function exportSalesCSV() {
         const blob = new Blob([csvContent], {type:"text/csv;charset=utf-8"});
         const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `sales_backup_${new Date().toISOString().slice(0,10)}.csv`; a.click();
         showStockMsg("විකුණුම් CSV බාගත කළා");
-    } catch (err) {
-        showStockMsg("දෝෂය: " + err.message, true);
-    }
+    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
 }
 
 document.getElementById('addBtn').onclick = addStock;
@@ -693,7 +675,7 @@ function updateTotals() {
     grandTotalSpan.innerText = `රු. ${(subtotal + courier).toFixed(2)}`;
 }
 
-// ================== SALE WITH CUSTOM ID (jj1310, jj1311, ...) ==================
+// ================== SALE WITH CUSTOM ID ==================
 async function getNextSaleId() {
     const counterRef = db.collection('metadata').doc('saleCounter');
     const newNumber = await db.runTransaction(async (transaction) => {
@@ -765,7 +747,7 @@ confirmSaleBtn.onclick = async function() {
     }
 };
 
-// ================== SALES HISTORY (Active / Deleted) ==================
+// ================== SALES HISTORY ==================
 async function searchSales() {
     const term = searchSaleInput.value.trim().toLowerCase();
     salesHistoryBody.innerHTML = "<tr><td colspan='6'>පූරණය වේ...</td></tr>";
@@ -896,7 +878,7 @@ function clearSelection() {
     document.getElementById('selectAllCheckbox').checked = false;
 }
 
-// Soft delete -> move to deleted_sales, restore stock
+// Soft delete
 async function deleteSale(saleId) {
     if (!confirm(`"${saleId}" බිල්පත මකා තොග යළි එක් කරන්නද?`)) return;
     try {
@@ -904,9 +886,7 @@ async function deleteSale(saleId) {
         if (!saleDoc.exists) { alert("Sale not found"); return; }
         const saleData = saleDoc.data();
         const items = saleData.items || [];
-
         const batch = db.batch();
-        // Restore stock quantities
         for (const item of items) {
             const stockRef = db.collection('stock').doc(item.id);
             const stockSnap = await stockRef.get();
@@ -915,20 +895,16 @@ async function deleteSale(saleId) {
                 batch.update(stockRef, { qty: newQty });
             }
         }
-        // Move to deleted_sales
         batch.set(db.collection('deleted_sales').doc(saleId), saleData);
-        // Delete from sales
         batch.delete(db.collection('sales').doc(saleId));
         await batch.commit();
         alert('විකිණීම මකා දමා තොග යාවත්කාලීන කරන ලදී');
         await fetchStock();
         searchSales();
-    } catch (err) {
-        alert("දෝෂය: " + err.message);
-    }
+    } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// Restore sale from deleted_sales back to sales, and deduct stock again
+// Restore
 async function restoreSale(saleId) {
     if (!confirm(`"${saleId}" නැවත සක්‍රිය කර තොගයෙන් අඩු කරන්නද?`)) return;
     try {
@@ -936,8 +912,6 @@ async function restoreSale(saleId) {
         if (!deletedDoc.exists) { alert("Deleted sale not found"); return; }
         const saleData = deletedDoc.data();
         const items = saleData.items || [];
-
-        // Check stock availability
         for (const item of items) {
             const stockSnap = await db.collection('stock').doc(item.id).get();
             if (!stockSnap.exists || (stockSnap.data().qty || 0) < item.qty) {
@@ -945,36 +919,28 @@ async function restoreSale(saleId) {
                 return;
             }
         }
-
         const batch = db.batch();
-        // Deduct stock again
         for (const item of items) {
             const stockRef = db.collection('stock').doc(item.id);
             batch.update(stockRef, { qty: firebase.firestore.FieldValue.increment(-item.qty) });
         }
-        // Move back to sales
         batch.set(db.collection('sales').doc(saleId), saleData);
-        // Delete from deleted_sales
         batch.delete(db.collection('deleted_sales').doc(saleId));
         await batch.commit();
         alert('විකිණීම නැවත සක්‍රිය කරන ලදී');
         await fetchStock();
         searchSales();
-    } catch (err) {
-        alert("දෝෂය: " + err.message);
-    }
+    } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// Permanent delete from deleted_sales
+// Permanent delete
 async function permanentDeleteSale(saleId) {
-    if (!confirm(`"${saleId}" ස්ථිරවම මකන්නද? මෙය ආපසු හැරවිය නොහැක!`)) return;
+    if (!confirm(`"${saleId}" ස්ථිරවම මකන්නද?`)) return;
     try {
         await db.collection('deleted_sales').doc(saleId).delete();
         alert('ස්ථිරවම මකා දමන ලදී');
         searchSales();
-    } catch (err) {
-        alert("දෝෂය: " + err.message);
-    }
+    } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
 function openCommentModal(saleId, currentComment) {
@@ -990,9 +956,7 @@ async function saveComment() {
         await db.collection('sales').doc(saleId).update({ comment: comment });
         closeCommentModal();
         searchSales();
-    } catch (err) {
-        alert("දෝෂය: " + err.message);
-    }
+    } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
 // ================== BILL VIEW ==================
@@ -1079,19 +1043,17 @@ async function downloadSelectedBills() {
     const saleIds = Array.from(selectedSales);
     const csvHeader = ["SaleID","Date","CustomerName","Address","Phone","ItemID","ItemName","Price","Qty","ItemTotal","Subtotal","Courier","GrandTotal"];
     const csvRows = [csvHeader];
-
     for (const id of saleIds) {
         try {
             const json = await getSaleData(id);
             const { customer, items } = json;
-            const date = new Date().toLocaleString(); // fallback, actual timestamp from sale not cached here
+            const date = new Date().toLocaleString();
             const customerName = customer.name || '';
             const address = customer.address || '';
             const phone = customer.phone || '';
             const subtotal = customer.subtotal;
             const courier = customer.courier;
             const grandTotal = customer.grandTotal;
-
             if (items && items.length > 0) {
                 items.forEach(item => {
                     csvRows.push([id, date, customerName, address, phone, item.id, item.name, item.price, item.qty, item.total, subtotal, courier, grandTotal]);
@@ -1103,13 +1065,10 @@ async function downloadSelectedBills() {
     }
     const csvContent = "\uFEFF" + csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
+    a.href = URL.createObjectURL(blob);
     a.download = `selected_bills_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
 

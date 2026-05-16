@@ -283,7 +283,7 @@ function showPosMsg(msg, isErr = false) {
     posMsg.style.color = isErr ? "#b22234" : "#1e466e";
 }
 
-// ================== CACHE HELPERS ==================
+// ================== CACHE HELPERS (FIXED) ==================
 function saveStockCache() {
     try { localStorage.setItem('stockCache', JSON.stringify(stockData)); } catch(e){}
 }
@@ -291,12 +291,16 @@ function loadStockCache() {
     try {
         const cached = localStorage.getItem('stockCache');
         if (cached) {
-            stockData = JSON.parse(cached);
-            filteredStock = stockData;
-            return true;
+            const parsed = JSON.parse(cached);
+            // Only use cache if it is a non-empty array
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                stockData = parsed;
+                filteredStock = stockData;
+                return true;
+            }
         }
-    } catch(e){}
-    return false;
+    } catch(e) {}
+    return false; // cache empty or invalid -> fetch from Firestore
 }
 
 // ================== AUTH ==================
@@ -386,7 +390,8 @@ async function saveSettings() {
 
 // ================== STOCK DATA ==================
 async function fetchStock() {
-    showStockMsg("පූරණය වෙමින්...");
+    showStockMsg("⏳ දත්ත ලබා ගනිමින්...");
+    stockTableBody.innerHTML = "<tr><td colspan='4'>පූරණය වේ...</td></tr>";
     try {
         const snapshot = await db.collection('stock').get();
         stockData = [];
@@ -872,10 +877,24 @@ function renderSalesPage() {
     renderSalesPagination();
 }
 
-function handleCheckboxToggle(event) { /* unchanged */ }
-
-function toggleAllCheckboxes(master) { /* unchanged */ }
-function clearSelection() { /* unchanged */ }
+function handleCheckboxToggle(event) {
+    const saleId = event.target.dataset.saleid;
+    event.target.checked ? selectedSales.add(saleId) : selectedSales.delete(saleId);
+    document.getElementById('selectAllCheckbox').checked = 
+        document.querySelectorAll('.saleCheckbox').length > 0 && 
+        Array.from(document.querySelectorAll('.saleCheckbox')).every(cb => cb.checked);
+}
+function toggleAllCheckboxes(master) {
+    document.querySelectorAll('.saleCheckbox').forEach(cb => {
+        cb.checked = master.checked;
+        master.checked ? selectedSales.add(cb.dataset.saleid) : selectedSales.delete(cb.dataset.saleid);
+    });
+}
+function clearSelection() {
+    selectedSales.clear();
+    document.querySelectorAll('.saleCheckbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAllCheckbox').checked = false;
+}
 
 // Soft delete -> move to deleted_sales, restore stock
 async function deleteSale(saleId) {
@@ -1029,8 +1048,70 @@ async function viewBill(saleId) {
     } catch (err) { alert("Error: " + err.message); }
 }
 
-async function printSelectedBills() { /* unchanged */ }
-async function downloadSelectedBills() { /* unchanged */ }
+async function printSelectedBills() {
+    if (selectedSales.size === 0) { alert("Please select at least one bill to print."); return; }
+    const saleIds = Array.from(selectedSales);
+    try {
+        const results = await Promise.all(saleIds.map(id => getSaleData(id).catch(() => null)));
+        let combinedHtml = '';
+        results.forEach((json, index) => {
+            if (!json || !json.success) return;
+            const { customer, items } = json;
+            combinedHtml += `
+                <div class="mini-bill">
+                    <div class="bill-header">Sale ID: ${saleIds[index]}</div>
+                    <div class="bill-customer">${escapeHtml(customer.name || '')}</div>
+                    <div class="bill-items">${items.map(it => `${it.name} x${it.qty} Rs.${it.total}`).join('<br>')}</div>
+                    <div class="bill-subtotal">Subtotal: Rs. ${parseFloat(customer.subtotal).toFixed(2)}</div>
+                    <div class="bill-courier">Courier: Rs. ${parseFloat(customer.courier).toFixed(2)}</div>
+                    <div class="bill-total">Grand Total: Rs. ${parseFloat(customer.grandTotal).toFixed(2)}</div>
+                </div>
+            `;
+        });
+        document.getElementById('billContent').innerHTML = `<div class="bill-grid">${combinedHtml}</div>`;
+        document.getElementById('billModal').style.display = 'flex';
+        setTimeout(() => { window.print(); }, 300);
+    } catch (err) { alert("Error: " + err.message); }
+}
+
+async function downloadSelectedBills() {
+    if (selectedSales.size === 0) { alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න."); return; }
+    const saleIds = Array.from(selectedSales);
+    const csvHeader = ["SaleID","Date","CustomerName","Address","Phone","ItemID","ItemName","Price","Qty","ItemTotal","Subtotal","Courier","GrandTotal"];
+    const csvRows = [csvHeader];
+
+    for (const id of saleIds) {
+        try {
+            const json = await getSaleData(id);
+            const { customer, items } = json;
+            const date = new Date().toLocaleString(); // fallback, actual timestamp from sale not cached here
+            const customerName = customer.name || '';
+            const address = customer.address || '';
+            const phone = customer.phone || '';
+            const subtotal = customer.subtotal;
+            const courier = customer.courier;
+            const grandTotal = customer.grandTotal;
+
+            if (items && items.length > 0) {
+                items.forEach(item => {
+                    csvRows.push([id, date, customerName, address, phone, item.id, item.name, item.price, item.qty, item.total, subtotal, courier, grandTotal]);
+                });
+            } else {
+                csvRows.push([id, date, customerName, address, phone, '', '', '', '', '', subtotal, courier, grandTotal]);
+            }
+        } catch (err) { console.error(err); }
+    }
+    const csvContent = "\uFEFF" + csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `selected_bills_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
 
 function closeModal() { document.getElementById('billModal').style.display = 'none'; }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Stock + POS (Firebase - No Cache)</title>
+    <title>Smart Stock + POS (Firebase)</title>
     <style>
         * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, Arial, sans-serif; }
         body { background: #eef2f7; margin: 0; padding: 20px; }
@@ -23,7 +23,7 @@
         .panel { display: none; }
         .panel.active { display: block; }
         .form-group { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
-        .form-group input { flex: 1; padding: 12px 16px; border: 1px solid #bdc4cc; border-radius: 60px; font-size: 1rem; background: #fdfdfd; }
+        .form-group input, .form-group select { flex: 1; padding: 12px 16px; border: 1px solid #bdc4cc; border-radius: 60px; font-size: 1rem; background: #fdfdfd; }
         .btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         button { background: #1e466e; border: none; color: white; padding: 10px 22px; border-radius: 40px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #0f2d4a; transform: translateY(-1px); }
@@ -32,7 +32,8 @@
         .btn-red { background: #b22234; } .btn-red:hover { background: #8b1a1a; }
         .btn-gray { background: #5a6874; } .btn-gray:hover { background: #3d484e; }
         .btn-orange { background: #e67e22; } .btn-orange:hover { background: #d35400; }
-        .search-box { width: 100%; padding: 12px 20px; margin: 15px 0; border-radius: 60px; border: 1px solid #ccc; font-size: 1rem; }
+        .btn-blue { background: #1e90ff; } .btn-blue:hover { background: #0066cc; }
+        .search-box, .filter-select { width: 100%; padding: 12px 20px; margin: 15px 0; border-radius: 60px; border: 1px solid #ccc; font-size: 1rem; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { background: #1e466e; color: white; padding: 12px; }
         td, th { border: 1px solid #cfdee9; padding: 10px; text-align: center; }
@@ -50,7 +51,9 @@
         .action-icons button { padding: 4px 10px; font-size: 0.85rem; border-radius: 20px; }
         .logo-print { display: none; }
         .modal .logo-print { display: block; max-width: 120px; margin: 0 auto 10px; }
-
+        .payment-status { font-weight: bold; }
+        .payment-paid { color: green; }
+        .payment-unpaid { color: #b22234; }
         @media print {
             body * { visibility: hidden; }
             #billModal, #billModal * { visibility: visible; }
@@ -164,6 +167,11 @@
                 <h3>📜 පැරණි බිල්පත් සොයන්න</h3>
                 <div class="form-group">
                     <input type="text" id="searchSaleInput" placeholder="Sale ID හෝ ගනුදෙනුකරු නම">
+                    <select id="paymentFilter" onchange="handlePaymentFilter()" style="max-width:200px;">
+                        <option value="all">📋 සියල්ල</option>
+                        <option value="paid">✅ ගෙවූ</option>
+                        <option value="unpaid">❌ නොගෙවූ</option>
+                    </select>
                     <button id="searchSaleBtn">🔍 සොයන්න</button>
                     <button id="printSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="printSelectedBills()">🖨️ තෝරාගත් බිල්පත් මුද්‍රණය</button>
                     <button id="downloadSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="downloadSelectedBills()">📥 Sheet බාගන්න</button>
@@ -178,6 +186,7 @@
                             <th>ගනුදෙනුකරු</th>
                             <th>දිනය</th>
                             <th>ග්‍රෑන්ඩ් ටෝටල්</th>
+                            <th>ගෙවීම්</th>
                             <th>ක්‍රියා</th>
                         </tr>
                     </thead>
@@ -207,10 +216,16 @@
     </div>
 </div>
 <div id="settingsModal" class="modal-overlay">
-    <div class="modal" style="max-width:400px;">
+    <div class="modal" style="max-width:500px;">
         <h3>⚙️ සැකසුම්</h3>
         <label>🚚 පෙරනිමි කුවර් ගාස්තුව (රු.)</label>
         <input type="number" id="newDefaultCourier" style="width:100%; padding:10px; margin:5px 0; border-radius:20px; border:1px solid #ccc;" min="0">
+        <hr>
+        <label>🔄 ඊළඟ Sale ID දැනට: <strong id="currentNextId"></strong></label>
+        <label>ඊළඟ jj අංකය (ආරම්භක අගය)</label>
+        <input type="number" id="newStartNumber" style="width:100%; padding:10px; margin:5px 0; border-radius:20px; border:1px solid #ccc;" min="1">
+        <button onclick="resetSaleCounter()" class="btn-blue" style="margin-top:10px;">🔁 Sale Counter නැවත සකසන්න</button>
+        <hr>
         <button onclick="saveSettings()" style="margin-top:15px;">💾 සුරකින්න</button>
         <button onclick="closeSettings()" style="margin-left:10px; background:#5a6874;">අවලංගු</button>
     </div>
@@ -246,6 +261,7 @@ const SALES_PER_PAGE = 20;
 let currentPage = 1, salesCurrentPage = 1, searchTimeout;
 const billCache = {};
 let isDeletedView = false;
+let paymentFilter = 'all'; // 'all', 'paid', 'unpaid'
 
 // DOM Elements
 const stockIdInp = document.getElementById('stockId');
@@ -272,6 +288,7 @@ const itemQty = document.getElementById('itemQty');
 const custName = document.getElementById('custName');
 const custAddress = document.getElementById('custAddress');
 const custPhone = document.getElementById('custPhone');
+const paymentFilterEl = document.getElementById('paymentFilter');
 
 function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
 function showStockMsg(msg, isError = false) {
@@ -304,7 +321,6 @@ auth.onAuthStateChanged(async (user) => {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         await loadConfig();
-        // 🔥 Always fetch fresh data from Firestore, no cache
         await fetchStock();
         await ensureSaleCounter();
     } else {
@@ -317,7 +333,7 @@ async function ensureSaleCounter() {
     const counterRef = db.collection('metadata').doc('saleCounter');
     const docSnap = await counterRef.get();
     if (!docSnap.exists) {
-        await counterRef.set({ lastNumber: 1309 });
+        await counterRef.set({ lastNumber: 1309 }); // default start jj1310
     }
 }
 
@@ -337,8 +353,16 @@ async function loadConfig() {
 }
 
 // ================== SETTINGS ==================
-function openSettings() {
+async function openSettings() {
     document.getElementById('newDefaultCourier').value = defaultCourier;
+    const counterRef = db.collection('metadata').doc('saleCounter');
+    const docSnap = await counterRef.get();
+    let nextNum = 1310;
+    if (docSnap.exists) {
+        nextNum = (docSnap.data().lastNumber || 1309) + 1;
+    }
+    document.getElementById('currentNextId').textContent = `jj${nextNum}`;
+    document.getElementById('newStartNumber').value = '';
     document.getElementById('settingsModal').style.display = 'flex';
 }
 function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
@@ -351,6 +375,23 @@ async function saveSettings() {
         alert('සැකසුම් සුරකින ලදී');
         closeSettings();
     } catch (err) { alert('දෝෂය: ' + err.message); }
+}
+
+async function resetSaleCounter() {
+    const newStart = parseInt(document.getElementById('newStartNumber').value);
+    if (isNaN(newStart) || newStart < 1) {
+        alert('කරුණාකර වලංගු ආරම්භක අංකයක් ඇතුළත් කරන්න (1 හෝ වැඩි)');
+        return;
+    }
+    if (!confirm(`jj${newStart} ලෙස ඊළඟ බිල්පත ආරම්භ වේ. ඉදිරියට යන්නද?`)) return;
+    try {
+        await db.collection('metadata').doc('saleCounter').set({ lastNumber: newStart - 1 });
+        alert(`Sale Counter සාර්ථකව යාවත්කාලීන කරන ලදී. ඊළඟ: jj${newStart}`);
+        document.getElementById('currentNextId').textContent = `jj${newStart}`;
+        document.getElementById('newStartNumber').value = '';
+    } catch (err) {
+        alert('දෝෂය: ' + err.message);
+    }
 }
 
 // ================== STOCK DATA (BATCH FETCH, NO CACHE) ==================
@@ -550,12 +591,12 @@ function exportStockCSV() {
 async function exportSalesCSV() {
     try {
         const snapshot = await db.collection('sales').orderBy('timestamp','desc').get();
-        const csvRows = [["SaleID","Date","CustomerName","Address","Phone","ItemID","ItemName","Price","Qty","ItemTotal","Subtotal","Courier","GrandTotal"]];
+        const csvRows = [["SaleID","Date","CustomerName","Address","Phone","ItemID","ItemName","Price","Qty","ItemTotal","Subtotal","Courier","GrandTotal","PaymentStatus"]];
         snapshot.forEach(doc => {
             const data = doc.data();
             const date = data.timestamp ? data.timestamp.toDate().toLocaleString('si-LK') : '';
             data.items.forEach(item => {
-                csvRows.push([doc.id, date, data.customerName, data.address, data.phone, item.id, item.name, item.price, item.qty, item.total, data.subtotal, data.courier, data.grandTotal]);
+                csvRows.push([doc.id, date, data.customerName, data.address, data.phone, item.id, item.name, item.price, item.qty, item.total, data.subtotal, data.courier, data.grandTotal, data.paymentStatus || 'unpaid']);
             });
         });
         const csvContent = "\uFEFF" + csvRows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
@@ -693,7 +734,8 @@ confirmSaleBtn.onclick = async function() {
             courier: courier,
             grandTotal: grandTotal,
             timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            comment: ''
+            comment: '',
+            paymentStatus: 'unpaid' // default unpaid
         };
 
         const batch = db.batch();
@@ -720,10 +762,16 @@ confirmSaleBtn.onclick = async function() {
     }
 };
 
-// ================== SALES HISTORY ==================
+// ================== SALES HISTORY (with Payment Status) ==================
+function handlePaymentFilter() {
+    paymentFilter = paymentFilterEl.value;
+    // re-apply filter on existing salesHistoryData
+    filterAndRenderSales();
+}
+
 async function searchSales() {
     const term = searchSaleInput.value.trim().toLowerCase();
-    salesHistoryBody.innerHTML = "<tr><td colspan='6'>පූරණය වේ...</td></tr>";
+    salesHistoryBody.innerHTML = "<tr><td colspan='7'>පූරණය වේ...</td></tr>";
     try {
         const collectionName = isDeletedView ? 'deleted_sales' : 'sales';
         let query = db.collection(collectionName).orderBy('timestamp', 'desc');
@@ -739,7 +787,8 @@ async function searchSales() {
                 Timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
                 GrandTotal: data.grandTotal,
                 Comment: data.comment || '',
-                Items: data.items
+                Items: data.items,
+                PaymentStatus: data.paymentStatus || 'unpaid'
             };
             if (term) {
                 const match = sale.SaleID.toLowerCase().includes(term) || 
@@ -750,13 +799,23 @@ async function searchSales() {
             }
         });
         salesCurrentPage = 1;
-        renderSalesPage();
+        filterAndRenderSales();
     } catch (err) {
-        salesHistoryBody.innerHTML = "<tr><td colspan='6'>දෝෂය: " + err.message + "</td></tr>";
+        salesHistoryBody.innerHTML = "<tr><td colspan='7'>දෝෂය: " + err.message + "</td></tr>";
         console.error(err);
     }
 }
 document.getElementById('searchSaleBtn').onclick = searchSales;
+
+function filterAndRenderSales() {
+    // apply payment filter
+    let filtered = salesHistoryData;
+    if (paymentFilter !== 'all') {
+        filtered = salesHistoryData.filter(s => s.PaymentStatus === paymentFilter);
+    }
+    // re-assign to a temporary array for rendering
+    renderSalesPage(filtered);
+}
 
 function toggleDeletedView() {
     isDeletedView = !isDeletedView;
@@ -775,10 +834,10 @@ function toggleDeletedView() {
     searchSales();
 }
 
-function renderSalesPagination() {
+function renderSalesPagination(filteredData) {
     salesPaginationDiv.innerHTML = "";
-    if (!salesHistoryData.length) return;
-    const totalPages = Math.ceil(salesHistoryData.length / SALES_PER_PAGE);
+    if (!filteredData.length) return;
+    const totalPages = Math.ceil(filteredData.length / SALES_PER_PAGE);
     if (totalPages <= 1) return;
     const prevBtn = document.createElement('button');
     prevBtn.textContent = 'පෙර'; prevBtn.disabled = salesCurrentPage === 1;
@@ -797,22 +856,35 @@ function renderSalesPagination() {
     salesPaginationDiv.appendChild(nextBtn);
 }
 
-function renderSalesPage() {
+// We'll store the filtered data globally to reuse in pagination changes
+let currentFilteredSalesData = [];
+
+function renderSalesPage(overrideData = null) {
+    if (overrideData) {
+        currentFilteredSalesData = overrideData;
+    }
+    const data = currentFilteredSalesData;
     salesHistoryBody.innerHTML = "";
     const start = (salesCurrentPage - 1) * SALES_PER_PAGE;
-    const pageData = salesHistoryData.slice(start, start + SALES_PER_PAGE);
+    const pageData = data.slice(start, start + SALES_PER_PAGE);
     if (!pageData.length) {
-        salesHistoryBody.innerHTML = "<tr><td colspan='6'>ප්‍රතිඵල නැත</td></tr>";
+        salesHistoryBody.innerHTML = "<tr><td colspan='7'>ප්‍රතිඵල නැත</td></tr>";
         document.getElementById('selectAllCheckbox').checked = false;
         return;
     }
     pageData.forEach(sale => {
         const row = document.createElement('tr');
         const isChecked = selectedSales.has(sale.SaleID);
+        const paymentText = sale.PaymentStatus === 'paid' ? '✅ ගෙවූ' : '❌ නොගෙවූ';
+        const paymentClass = sale.PaymentStatus === 'paid' ? 'payment-paid' : 'payment-unpaid';
+        const paymentBtnLabel = sale.PaymentStatus === 'paid' ? 'නොගෙවූ' : 'ගෙවූ';
+        const paymentBtnIcon = sale.PaymentStatus === 'paid' ? '❌' : '✅';
+        
         const actions = isDeletedView ?
             `<button class="btn-green" onclick="event.stopPropagation(); restoreSale('${sale.SaleID}')">↩️ Restore</button>
              <button class="btn-red" onclick="event.stopPropagation(); permanentDeleteSale('${sale.SaleID}')">🗑️ ස්ථිර</button>` :
             `<button class="btn-gray" onclick="event.stopPropagation(); openCommentModal('${sale.SaleID}', '${escapeHtml(sale.Comment || '')}')">💬</button>
+             <button class="btn-blue" onclick="event.stopPropagation(); togglePayment('${sale.SaleID}', '${sale.PaymentStatus}')">💰 ${paymentBtnLabel}</button>
              <button class="btn-red" onclick="event.stopPropagation(); deleteSale('${sale.SaleID}')">🗑️</button>`;
         row.innerHTML = `
             <td><input type="checkbox" class="saleCheckbox" data-saleid="${sale.SaleID}" ${isChecked ? 'checked' : ''} onchange="handleCheckboxToggle(event)"></td>
@@ -820,6 +892,7 @@ function renderSalesPage() {
             <td>${escapeHtml(sale.CustomerName)}</td>
             <td>${sale.Timestamp.toLocaleString('si-LK')}</td>
             <td>රු. ${parseFloat(sale.GrandTotal).toFixed(2)}</td>
+            <td><span class="${paymentClass}">${paymentText}</span></td>
             <td class="action-icons">${actions}</td>
         `;
         row.onclick = (e) => {
@@ -829,7 +902,21 @@ function renderSalesPage() {
     });
     const allVisible = document.querySelectorAll('.saleCheckbox');
     document.getElementById('selectAllCheckbox').checked = allVisible.length > 0 && Array.from(allVisible).every(cb => cb.checked);
-    renderSalesPagination();
+    renderSalesPagination(data);
+}
+
+// payment toggle
+async function togglePayment(saleId, currentStatus) {
+    const newStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
+    try {
+        await db.collection('sales').doc(saleId).update({ paymentStatus: newStatus });
+        // update local data and re-render
+        const sale = salesHistoryData.find(s => s.SaleID === saleId);
+        if (sale) sale.PaymentStatus = newStatus;
+        filterAndRenderSales();
+    } catch (err) {
+        alert('දෝෂය: ' + err.message);
+    }
 }
 
 function handleCheckboxToggle(event) {
@@ -851,7 +938,7 @@ function clearSelection() {
     document.getElementById('selectAllCheckbox').checked = false;
 }
 
-// Soft delete
+// Soft delete (unchanged)
 async function deleteSale(saleId) {
     if (!confirm(`"${saleId}" බිල්පත මකා තොග යළි එක් කරන්නද?`)) return;
     try {
@@ -877,7 +964,7 @@ async function deleteSale(saleId) {
     } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// Restore
+// Restore (unchanged)
 async function restoreSale(saleId) {
     if (!confirm(`"${saleId}" නැවත සක්‍රිය කර තොගයෙන් අඩු කරන්නද?`)) return;
     try {
@@ -906,7 +993,7 @@ async function restoreSale(saleId) {
     } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
-// Permanent delete
+// Permanent delete (unchanged)
 async function permanentDeleteSale(saleId) {
     if (!confirm(`"${saleId}" ස්ථිරවම මකන්නද?`)) return;
     try {
@@ -916,6 +1003,7 @@ async function permanentDeleteSale(saleId) {
     } catch (err) { alert("දෝෂය: " + err.message); }
 }
 
+// Comment modal (unchanged)
 function openCommentModal(saleId, currentComment) {
     document.getElementById('commentSaleId').value = saleId;
     document.getElementById('commentText').value = currentComment || '';
@@ -1014,7 +1102,7 @@ async function printSelectedBills() {
 async function downloadSelectedBills() {
     if (selectedSales.size === 0) { alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න."); return; }
     const saleIds = Array.from(selectedSales);
-    const csvHeader = ["SaleID","Date","CustomerName","Address","Phone","ItemID","ItemName","Price","Qty","ItemTotal","Subtotal","Courier","GrandTotal"];
+    const csvHeader = ["SaleID","Date","CustomerName","Address","Phone","ItemID","ItemName","Price","Qty","ItemTotal","Subtotal","Courier","GrandTotal","PaymentStatus"];
     const csvRows = [csvHeader];
     for (const id of saleIds) {
         try {
@@ -1027,19 +1115,21 @@ async function downloadSelectedBills() {
             const subtotal = customer.subtotal;
             const courier = customer.courier;
             const grandTotal = customer.grandTotal;
+            const paymentStatus = salesHistoryData.find(s => s.SaleID === id)?.PaymentStatus || 'unpaid';
             if (items && items.length > 0) {
                 items.forEach(item => {
-                    csvRows.push([id, date, customerName, address, phone, item.id, item.name, item.price, item.qty, item.total, subtotal, courier, grandTotal]);
+                    csvRows.push([id, date, customerName, address, phone, item.id, item.name, item.price, item.qty, item.total, subtotal, courier, grandTotal, paymentStatus]);
                 });
             } else {
-                csvRows.push([id, date, customerName, address, phone, '', '', '', '', '', subtotal, courier, grandTotal]);
+                csvRows.push([id, date, customerName, address, phone, '', '', '', '', '', subtotal, courier, grandTotal, paymentStatus]);
             }
         } catch (err) { console.error(err); }
     }
     const csvContent = "\uFEFF" + csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = `selected_bills_${new Date().toISOString().slice(0,10)}.csv`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);

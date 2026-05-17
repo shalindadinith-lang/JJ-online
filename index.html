@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="si">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,8 +27,8 @@
         .tab.active { background: #1e466e; color: white; }
         .panel { display: none; }
         .panel.active { display: block; }
-        .form-group { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
-        .form-group input, .form-group select { flex: 1; padding: 12px 16px; border: 1px solid #bdc4cc; border-radius: 60px; font-size: 1rem; background: #fdfdfd; }
+        .form-group { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; align-items: center; }
+        .form-group input, .form-group select { padding: 12px 16px; border: 1px solid #bdc4cc; border-radius: 60px; font-size: 1rem; background: #fdfdfd; }
         .btn-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
         button { background: #1e466e; border: none; color: white; padding: 10px 22px; border-radius: 40px; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #0f2d4a; transform: translateY(-1px); }
@@ -79,16 +79,17 @@
             .mini-bill .bill-courier { font-size: 8pt; margin-top: 1mm; }
             .mini-bill .bill-total { font-weight:bold; text-align:right; margin-top: 2mm; }
         }
+        .date-label { margin-right: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <!-- LOGIN SCREEN -->
 <div id="loginScreen">
-    <h2>🔐 පිවිසුම (Firebase)</h2>
+    <h2>🔐 Login (Firebase)</h2>
     <input type="email" id="loginEmail" placeholder="Email">
-    <input type="password" id="loginPassword" placeholder="මුරපදය">
-    <button id="loginBtn">ඇතුල් වෙන්න</button>
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button id="loginBtn">Login</button>
     <p id="loginError"></p>
 </div>
 
@@ -96,111 +97,116 @@
 <div id="mainApp">
     <div class="container">
         <div class="header-bar">
-            <h2>📦 ස්මාර්ට් තොග හා POS පද්ධතිය (Firebase)</h2>
+            <h2>📦 Smart Stock & POS System (Firebase)</h2>
             <div class="header-buttons">
-                <button class="btn-purple" onclick="openReports()">📊 වාර්තා</button>
-                <button class="settings-btn" onclick="openSettings()">⚙️ සැකසුම්</button>
+                <button class="btn-purple" onclick="openReports()">📊 Reports</button>
+                <button class="settings-btn" onclick="openSettings()">⚙️ Settings</button>
             </div>
         </div>
 
         <div class="tabs">
-            <div id="tabStock" class="tab active" onclick="switchTab('stock')">📋 තොග කළමනාකරණය</div>
-            <div id="tabPOS" class="tab" onclick="switchTab('pos')">🛒 POS බිල්පත්</div>
+            <div id="tabStock" class="tab active" onclick="switchTab('stock')">📋 Stock Management</div>
+            <div id="tabPOS" class="tab" onclick="switchTab('pos')">🛒 POS Billing</div>
         </div>
 
         <!-- STOCK PANEL -->
         <div id="panelStock" class="panel active">
             <div class="form-group">
-                <input type="text" id="stockId" placeholder="භාණ්ඩ කේතය (ID)">
-                <input type="text" id="stockName" placeholder="නම">
-                <input type="number" id="stockPrice" placeholder="මිල (රු.)">
-                <input type="number" id="stockQty" placeholder="ප්‍රමාණය">
+                <input type="text" id="stockId" placeholder="Item Code (ID)">
+                <input type="text" id="stockName" placeholder="Name">
+                <input type="number" id="stockPrice" placeholder="Price (Rs.)">
+                <input type="number" id="stockQty" placeholder="Quantity">
             </div>
             <div class="btn-group">
-                <button id="addBtn">➕ එකතු කරන්න</button>
-                <button id="updateBtn" class="btn-gray">✏️ යාවත්කාලීන (අලුත් ගණන)</button>
-                <button id="addStockBtn" class="btn-orange">📈 තොගයට එකතු</button>
-                <button id="deleteBtn" class="btn-red">🗑️ මකන්න</button>
-                <button id="clearBtn">🧹 හිස් කරන්න</button>
-                <button id="exportStockCSVBtn" class="btn-green">📥 තොග CSV</button>
-                <button id="exportSalesCSVBtn" class="btn-green">📥 විකුණුම් CSV</button>
+                <button id="addBtn">➕ Add</button>
+                <button id="updateBtn" class="btn-gray">✏️ Update (New Qty)</button>
+                <button id="addStockBtn" class="btn-orange">📈 Add to Stock</button>
+                <button id="deleteBtn" class="btn-red">🗑️ Delete</button>
+                <button id="clearBtn">🧹 Clear</button>
+                <button id="exportStockCSVBtn" class="btn-green">📥 Export Stock CSV</button>
+                <button id="exportSalesCSVBtn" class="btn-green">📥 Export Sales CSV</button>
             </div>
-            <input type="text" id="searchStock" class="search-box" placeholder="🔍 භාණ්ඩ සොයන්න...">
+            <input type="text" id="searchStock" class="search-box" placeholder="🔍 Search items...">
             <div class="stats">
-                <span>📊 සම්පූර්ණ ප්‍රමාණය: <strong id="totalQty">0</strong></span>
-                <span>💰 සම්පූර්ණ වටිනාකම: <strong id="totalValue">රු. 0</strong></span>
+                <span>📊 Total Quantity: <strong id="totalQty">0</strong></span>
+                <span>💰 Total Value: <strong id="totalValue">Rs. 0</strong></span>
             </div>
             <table id="stockTable">
-                <thead><tr><th>ID</th><th>නම</th><th>මිල (රු.)</th><th>ප්‍රමාණය</th></tr></thead>
+                <thead><tr><th>ID</th><th>Name</th><th>Price (Rs.)</th><th>Quantity</th></tr></thead>
                 <tbody id="stockTableBody"></tbody>
             </table>
             <div class="pagination" id="paginationControls"></div>
-            <div id="msgBoxStock" class="msg-area">✅ සූදානම්</div>
+            <div id="msgBoxStock" class="msg-area">✅ Ready</div>
         </div>
 
         <!-- POS PANEL -->
         <div id="panelPOS" class="panel">
             <div style="display: flex; gap: 20px; flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 300px;">
-                    <h3>👤 ගනුදෙනුකරු</h3>
+                    <h3>👤 Customer</h3>
                     <div class="form-group">
-                        <input type="text" id="custName" placeholder="නම">
-                        <input type="text" id="custAddress" placeholder="ලිපිනය">
-                        <input type="text" id="custPhone" placeholder="දුරකතන">
+                        <input type="text" id="custName" placeholder="Name">
+                        <input type="text" id="custAddress" placeholder="Address">
+                        <input type="text" id="custCity" placeholder="City">
+                        <input type="text" id="custPhone" placeholder="Phone">
                     </div>
-                    <h3>➕ භාණ්ඩ එකතු කරන්න</h3>
+                    <h3>➕ Add Item</h3>
                     <div class="form-group">
-                        <input list="itemList" id="itemSearch" placeholder="ID හෝ නම ටයිප් කරන්න" onchange="onItemSelect()">
+                        <input list="itemList" id="itemSearch" placeholder="Type ID or name" onchange="onItemSelect()">
                         <datalist id="itemList"></datalist>
-                        <input type="number" id="itemQty" placeholder="ප්‍රමාණය" value="1" min="1">
-                        <button id="addToCartBtn" class="btn-green">➕ කරත්තයට</button>
+                        <input type="number" id="itemQty" placeholder="Qty" value="1" min="1">
+                        <button id="addToCartBtn" class="btn-green">➕ Add to Cart</button>
                     </div>
                     <div id="posMsg" class="msg-area"></div>
                 </div>
                 <div style="flex: 2; min-width: 400px;">
-                    <h3>🛒 කරත්තය</h3>
+                    <h3>🛒 Cart</h3>
                     <table id="cartTable" class="cart-table">
-                        <thead><tr><th>ID</th><th>නම</th><th>මිල</th><th>ප්‍රමාණ</th><th>මුළු</th><th></th></tr></thead>
+                        <thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Qty</th><th>Total</th><th></th></tr></thead>
                         <tbody id="cartBody"></tbody>
                     </table>
                     <div style="display: flex; flex-direction: column; align-items: flex-end; margin-top: 15px; gap: 10px;">
-                        <div><strong>උප එකතුව :</strong> <span id="subtotal">රු. 0.00</span></div>
+                        <div><strong>Subtotal :</strong> <span id="subtotal">Rs. 0.00</span></div>
                         <div>
-                            <strong>කුවර් ගාස්තු :</strong>
+                            <strong>Courier :</strong>
                             <input type="number" id="courierCharge" value="0" min="0" style="width:100px; padding:5px; margin-left:10px;" onchange="updateTotals()">
                         </div>
-                        <div style="font-size:1.3em;"><strong>ග්‍රෑන්ඩ් ටෝටල් :</strong> <span id="grandTotal">රු. 0.00</span></div>
-                        <button id="confirmSaleBtn" class="btn-green" style="font-size:1.1em;">✅ බිල්පත තහවුරු කරන්න</button>
+                        <div style="font-size:1.3em;"><strong>Grand Total :</strong> <span id="grandTotal">Rs. 0.00</span></div>
+                        <button id="confirmSaleBtn" class="btn-green" style="font-size:1.1em;">✅ Confirm Bill</button>
                     </div>
                 </div>
             </div>
 
             <!-- Sales History -->
             <div style="margin-top: 40px; border-top: 2px solid #ccc; padding-top: 20px;">
-                <h3>📜 පැරණි බිල්පත් සොයන්න</h3>
+                <h3>📜 Search Old Bills</h3>
                 <div class="form-group">
-                    <input type="text" id="searchSaleInput" placeholder="Sale ID හෝ ගනුදෙනුකරු නම">
+                    <input type="text" id="searchSaleInput" placeholder="Sale ID or Customer Name">
                     <select id="paymentFilter" onchange="handlePaymentFilter()" style="max-width:200px;">
-                        <option value="all">📋 සියල්ල</option>
-                        <option value="paid">✅ ගෙවූ</option>
-                        <option value="unpaid">❌ නොගෙවූ</option>
+                        <option value="all">📋 All</option>
+                        <option value="paid">✅ Paid</option>
+                        <option value="unpaid">❌ Unpaid</option>
                     </select>
-                    <button id="searchSaleBtn">🔍 සොයන්න</button>
-                    <button id="printSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="printSelectedBills()">🖨️ තෝරාගත් බිල්පත් මුද්‍රණය</button>
-                    <button id="downloadSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="downloadSelectedBills()">📥 Sheet බාගන්න</button>
-                    <button id="clearSelectionBtn" class="btn-gray" style="margin-left:5px;" onclick="clearSelection()">🧹 සලකුණු මකන්න</button>
-                    <button id="showDeletedBtn" class="btn-red" style="margin-left:10px;" onclick="toggleDeletedView()">🗑️ මැකූ බිල්පත්</button>
+                    <span class="date-label">📅 From:</span>
+                    <input type="date" id="dateFrom" style="max-width:140px;">
+                    <span class="date-label">📅 To:</span>
+                    <input type="date" id="dateTo" style="max-width:140px;">
+                    <button id="searchSaleBtn">🔍 Search</button>
+                    <button id="printSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="printSelectedBills()">🖨️ Print Selected Bills</button>
+                    <button id="downloadSelectedBtn" class="btn-green" style="margin-left:10px;" onclick="downloadSelectedBills()">📥 Download Sheet</button>
+                    <button id="clearSelectionBtn" class="btn-gray" style="margin-left:5px;" onclick="clearSelection()">🧹 Clear Marks</button>
+                    <button id="showDeletedBtn" class="btn-red" style="margin-left:10px;" onclick="toggleDeletedView()">🗑️ Deleted Bills</button>
                 </div>
                 <table id="salesHistoryTable">
                     <thead>
                         <tr>
-                            <th><input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes(this)"> සියල්ල</th>
+                            <th><input type="checkbox" id="selectAllCheckbox" onchange="toggleAllCheckboxes(this)"> All</th>
                             <th>Sale ID</th>
-                            <th>ගනුදෙනුකරු</th>
-                            <th>දිනය</th>
-                            <th>ග්‍රෑන්ඩ් ටෝටල්</th>
-                            <th>ගෙවීම්</th>
-                            <th>ක්‍රියා</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Grand Total</th>
+                            <th>Payment</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="salesHistoryBody"></tbody>
@@ -221,37 +227,37 @@
 </div>
 <div id="commentModal" class="modal-overlay">
     <div class="modal" style="max-width:450px;">
-        <h3>💬 Comment එක් කරන්න</h3>
+        <h3>💬 Add Comment</h3>
         <input type="hidden" id="commentSaleId">
-        <textarea id="commentText" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;" placeholder="බිල්පත පිළිබඳ සටහන..."></textarea>
-        <button onclick="saveComment()" style="margin-top:10px;">💾 සුරකින්න</button>
-        <button onclick="closeCommentModal()" style="margin-left:10px; background:#5a6874;">අවලංගු</button>
+        <textarea id="commentText" rows="3" style="width:100%; padding:10px; border-radius:12px; border:1px solid #ccc;" placeholder="Note about the bill..."></textarea>
+        <button onclick="saveComment()" style="margin-top:10px;">💾 Save</button>
+        <button onclick="closeCommentModal()" style="margin-left:10px; background:#5a6874;">Cancel</button>
     </div>
 </div>
 <div id="settingsModal" class="modal-overlay">
     <div class="modal" style="max-width:500px;">
-        <h3>⚙️ සැකසුම්</h3>
-        <label>🚚 පෙරනිමි කුවර් ගාස්තුව (රු.)</label>
+        <h3>⚙️ Settings</h3>
+        <label>🚚 Default Courier Fee (Rs.)</label>
         <input type="number" id="newDefaultCourier" style="width:100%; padding:10px; margin:5px 0; border-radius:20px; border:1px solid #ccc;" min="0">
         <hr>
-        <label>🔄 ඊළඟ Sale ID දැනට: <strong id="currentNextId"></strong></label>
-        <label>ඊළඟ jj අංකය (ආරම්භක අගය)</label>
+        <label>🔄 Next Sale ID currently: <strong id="currentNextId"></strong></label>
+        <label>Next JJ number (start value)</label>
         <input type="number" id="newStartNumber" style="width:100%; padding:10px; margin:5px 0; border-radius:20px; border:1px solid #ccc;" min="1">
-        <button onclick="resetSaleCounter()" class="btn-blue" style="margin-top:10px;">🔁 Sale Counter නැවත සකසන්න</button>
+        <button onclick="resetSaleCounter()" class="btn-blue" style="margin-top:10px;">🔁 Reset Sale Counter</button>
         <hr>
-        <button onclick="saveSettings()" style="margin-top:15px;">💾 සුරකින්න</button>
-        <button onclick="closeSettings()" style="margin-left:10px; background:#5a6874;">අවලංගු</button>
+        <button onclick="saveSettings()" style="margin-top:15px;">💾 Save</button>
+        <button onclick="closeSettings()" style="margin-left:10px; background:#5a6874;">Cancel</button>
     </div>
 </div>
 <!-- Reports Modal -->
 <div id="reportsModal" class="modal-overlay">
     <div class="modal" style="max-width:1300px; max-height:90vh;">
-        <h2>📊 සම්පූර්ණ වාර්තාව</h2>
+        <h2>📊 Full Report</h2>
         <div id="reportContent" style="max-height:60vh; overflow-y: auto; margin: 15px 0;"></div>
         <div style="display: flex; gap:10px; justify-content: center; flex-wrap: wrap;">
-            <button class="btn-green" onclick="exportToExcel()">📥 Excel බාගන්න</button>
+            <button class="btn-green" onclick="exportToExcel()">📥 Download Excel</button>
         </div>
-        <button onclick="closeReports()" style="margin-top:10px;">වසන්න</button>
+        <button onclick="closeReports()" style="margin-top:10px;">Close</button>
     </div>
 </div>
 
@@ -259,12 +265,12 @@
 // Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyAwtpc_mfV50DYh19LBJFAaa-oe_yP5Eq8",
-    authDomain: "jj-online-stock.firebaseapp.com",
-    projectId: "jj-online-stock",
-    storageBucket: "jj-online-stock.firebasestorage.app",
-    messagingSenderId: "450413738491",
-    appId: "1:450413738491:web:38001c54af3e2ff370335e",
-    measurementId: "G-0BF50CE0NP"
+  authDomain: "jj-online-stock.firebaseapp.com",
+  projectId: "jj-online-stock",
+  storageBucket: "jj-online-stock.firebasestorage.app",
+  messagingSenderId: "450413738491",
+  appId: "1:450413738491:web:38001c54af3e2ff370335e",
+  measurementId: "G-0BF50CE0NP"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -282,6 +288,9 @@ let isDeletedView = false;
 let paymentFilter = 'all';
 let reportStockData = [];
 let reportSalesData = [];
+
+// ---- Replace this URL with your own JJ Online logo ----
+const LOGO_URL = "https://i.postimg.cc/7Y8D56Py/Blue-and-Orange-Minimalist-Gaming-Laptop-Sale-Instagram-Post-(16).png";
 
 // DOM Elements
 const stockIdInp = document.getElementById('stockId');
@@ -307,6 +316,7 @@ const itemSearch = document.getElementById('itemSearch');
 const itemQty = document.getElementById('itemQty');
 const custName = document.getElementById('custName');
 const custAddress = document.getElementById('custAddress');
+const custCity = document.getElementById('custCity');
 const custPhone = document.getElementById('custPhone');
 const paymentFilterEl = document.getElementById('paymentFilter');
 
@@ -326,7 +336,7 @@ document.getElementById('loginBtn').onclick = async () => {
     const password = document.getElementById('loginPassword').value.trim();
     const loginError = document.getElementById('loginError');
     if (!email || !password) {
-        loginError.textContent = "Email සහ මුරපදය ඇතුළත් කරන්න";
+        loginError.textContent = "Please enter email and password";
         return;
     }
     try {
@@ -381,7 +391,7 @@ async function openSettings() {
     if (docSnap.exists) {
         nextNum = (docSnap.data().lastNumber || 1309) + 1;
     }
-    document.getElementById('currentNextId').textContent = `jj${nextNum}`;
+    document.getElementById('currentNextId').textContent = `JJ${nextNum}`;
     document.getElementById('newStartNumber').value = '';
     document.getElementById('settingsModal').style.display = 'flex';
 }
@@ -392,31 +402,31 @@ async function saveSettings() {
         await db.collection('config').doc('default').set({ DefaultCourier: newCourier }, { merge: true });
         defaultCourier = newCourier;
         courierChargeEl.value = defaultCourier;
-        alert('සැකසුම් සුරකින ලදී');
+        alert('Settings saved');
         closeSettings();
-    } catch (err) { alert('දෝෂය: ' + err.message); }
+    } catch (err) { alert('Error: ' + err.message); }
 }
 async function resetSaleCounter() {
     const newStart = parseInt(document.getElementById('newStartNumber').value);
     if (isNaN(newStart) || newStart < 1) {
-        alert('කරුණාකර වලංගු ආරම්භක අංකයක් ඇතුළත් කරන්න (1 හෝ වැඩි)');
+        alert('Please enter a valid start number (1 or more)');
         return;
     }
-    if (!confirm(`jj${newStart} ලෙස ඊළඟ බිල්පත ආරම්භ වේ. ඉදිරියට යන්නද?`)) return;
+    if (!confirm(`Next bill will start as JJ${newStart}. Proceed?`)) return;
     try {
         await db.collection('metadata').doc('saleCounter').set({ lastNumber: newStart - 1 });
-        alert(`Sale Counter සාර්ථකව යාවත්කාලීන කරන ලදී. ඊළඟ: jj${newStart}`);
-        document.getElementById('currentNextId').textContent = `jj${newStart}`;
+        alert(`Sale Counter updated successfully. Next: JJ${newStart}`);
+        document.getElementById('currentNextId').textContent = `JJ${newStart}`;
         document.getElementById('newStartNumber').value = '';
     } catch (err) {
-        alert('දෝෂය: ' + err.message);
+        alert('Error: ' + err.message);
     }
 }
 
 // ================== STOCK DATA ==================
 async function fetchStock() {
-    showStockMsg("⏳ දත්ත ලබා ගනිමින්...");
-    stockTableBody.innerHTML = "<tr><td colspan='4'>Database වෙතින් පූරණය වේ...</td></tr>";
+    showStockMsg("Loading data...");
+    stockTableBody.innerHTML = "<tr><td colspan='4'>Loading from Database...</td></tr>";
     try {
         let allDocs = [];
         let lastDoc = null;
@@ -444,9 +454,9 @@ async function fetchStock() {
         updateStockStats(filteredStock);
         checkLowStock();
         updateItemDatalist();
-        showStockMsg(`✅ Database වෙතින් භාණ්ඩ ${stockData.length} ක් පූරණය කළා`);
+        showStockMsg(`Loaded ${stockData.length} items from database`);
     } catch (err) {
-        showStockMsg("දෝෂයකි: " + err.message, true);
+        showStockMsg("Error: " + err.message, true);
     }
 }
 
@@ -455,7 +465,7 @@ function renderStockTable() {
     const start = (currentPage - 1) * ROWS_PER_PAGE;
     const pageData = filteredStock.slice(start, start + ROWS_PER_PAGE);
     if (!pageData.length) {
-        stockTableBody.innerHTML = "<tr><td colspan='4'>දත්ත නැත</td></tr>";
+        stockTableBody.innerHTML = "<tr><td colspan='4'>No data</td></tr>";
     } else {
         pageData.forEach(row => {
             const tr = document.createElement('tr');
@@ -475,7 +485,7 @@ function renderPagination() {
     const totalPages = Math.ceil(filteredStock.length / ROWS_PER_PAGE) || 1;
     if (totalPages <= 1) return;
     const prevBtn = document.createElement('button');
-    prevBtn.textContent = 'පෙර'; prevBtn.disabled = currentPage === 1;
+    prevBtn.textContent = 'Prev'; prevBtn.disabled = currentPage === 1;
     prevBtn.onclick = () => { if (currentPage > 1) { currentPage--; renderStockTable(); } };
     paginationDiv.appendChild(prevBtn);
     for (let i = 1; i <= totalPages; i++) {
@@ -486,7 +496,7 @@ function renderPagination() {
         paginationDiv.appendChild(btn);
     }
     const nextBtn = document.createElement('button');
-    nextBtn.textContent = 'මීළඟ'; nextBtn.disabled = currentPage === totalPages;
+    nextBtn.textContent = 'Next'; nextBtn.disabled = currentPage === totalPages;
     nextBtn.onclick = () => { if (currentPage < totalPages) { currentPage++; renderStockTable(); } };
     paginationDiv.appendChild(nextBtn);
 }
@@ -495,7 +505,7 @@ function updateStockStats(data) {
     let totalQ = 0, totalVal = 0;
     data.forEach(row => { let q = parseFloat(row[3])||0, p = parseFloat(row[2])||0; totalQ += q; totalVal += q*p; });
     totalQtySpan.innerText = totalQ;
-    totalValueSpan.innerText = `රු. ${totalVal.toFixed(2)}`;
+    totalValueSpan.innerText = `Rs. ${totalVal.toFixed(2)}`;
 }
 
 function checkLowStock() {
@@ -528,38 +538,38 @@ searchStockBox.addEventListener('input', () => {
 // ================== STOCK CRUD ==================
 async function addStock() {
     const id = stockIdInp.value.trim(), name = stockNameInp.value.trim(), price = parseFloat(stockPriceInp.value), qty = parseInt(stockQtyInp.value);
-    if (!id || !name || isNaN(price) || isNaN(qty)) { showStockMsg("සියලු ක්ෂේත්‍ර පුරවන්න", true); return; }
-    if (qty < 0) { showStockMsg("ප්‍රමාණය සෘණ විය නොහැක", true); return; }
+    if (!id || !name || isNaN(price) || isNaN(qty)) { showStockMsg("Fill all fields", true); return; }
+    if (qty < 0) { showStockMsg("Quantity cannot be negative", true); return; }
     try {
         const docRef = db.collection('stock').doc(id);
         const docSnap = await docRef.get();
-        if (docSnap.exists) { showStockMsg("මෙම ID එක දැනටමත් ඇත", true); return; }
+        if (docSnap.exists) { showStockMsg("This ID already exists", true); return; }
         await docRef.set({ name, price, qty });
-        showStockMsg(`"${id}" එකතු කරන ලදී`);
+        showStockMsg(`"${id}" added`);
         clearStockForm();
         await fetchStock();
-    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
+    } catch (err) { showStockMsg("Error: " + err.message, true); }
 }
 
 async function updateStock() {
     const id = stockIdInp.value.trim(), name = stockNameInp.value.trim(), price = parseFloat(stockPriceInp.value), qty = parseInt(stockQtyInp.value);
-    if (!id || !name || isNaN(price) || isNaN(qty)) { showStockMsg("සියලු ක්ෂේත්‍ර පුරවන්න", true); return; }
-    if (qty < 0) { showStockMsg("ප්‍රමාණය සෘණ විය නොහැක", true); return; }
+    if (!id || !name || isNaN(price) || isNaN(qty)) { showStockMsg("Fill all fields", true); return; }
+    if (qty < 0) { showStockMsg("Quantity cannot be negative", true); return; }
     try {
         const docRef = db.collection('stock').doc(id);
         const docSnap = await docRef.get();
-        if (!docSnap.exists) { showStockMsg("භාණ්ඩය හමු නොවීය", true); return; }
+        if (!docSnap.exists) { showStockMsg("Item not found", true); return; }
         await docRef.update({ name, price, qty });
-        showStockMsg(`"${id}" යාවත්කාලීන කරන ලදී`);
+        showStockMsg(`"${id}" updated`);
         clearStockForm();
         await fetchStock();
-    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
+    } catch (err) { showStockMsg("Error: " + err.message, true); }
 }
 
 async function addToStock() {
     const id = stockIdInp.value.trim();
     const qtyToAdd = parseInt(stockQtyInp.value);
-    if (!id || isNaN(qtyToAdd) || qtyToAdd <= 0) { showStockMsg("ID සහ එකතු කළ යුතු ප්‍රමාණය ඇතුළත් කරන්න", true); return; }
+    if (!id || isNaN(qtyToAdd) || qtyToAdd <= 0) { showStockMsg("Enter ID and amount to add", true); return; }
     const name = stockNameInp.value.trim();
     const price = parseFloat(stockPriceInp.value);
     try {
@@ -572,39 +582,39 @@ async function addToStock() {
             if (name) updateData.name = name;
             if (!isNaN(price)) updateData.price = price;
             await docRef.update(updateData);
-            showStockMsg(`"${id}" තොගයට ${qtyToAdd} ක් එකතු විය. නව ප්‍රමාණය: ${newQty}`);
+            showStockMsg(`Added ${qtyToAdd} to "${id}". New quantity: ${newQty}`);
         } else {
-            if (!name || isNaN(price)) { showStockMsg("නව භාණ්ඩයක් සඳහා නම සහ මිල අවශ්‍යයි", true); return; }
+            if (!name || isNaN(price)) { showStockMsg("New item requires name and price", true); return; }
             await docRef.set({ name, price, qty: qtyToAdd });
-            showStockMsg(`"${id}" නව භාණ්ඩයක් ලෙස එකතු කරන ලදී`);
+            showStockMsg(`"${id}" added as new item`);
         }
         clearStockForm();
         await fetchStock();
-    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
+    } catch (err) { showStockMsg("Error: " + err.message, true); }
 }
 
 async function deleteStock() {
     const id = stockIdInp.value.trim();
-    if (!id) { showStockMsg("ID අවශ්‍යයි", true); return; }
-    if (!confirm(`"${id}" මකන්නද?`)) return;
+    if (!id) { showStockMsg("ID required", true); return; }
+    if (!confirm(`Delete "${id}"?`)) return;
     try {
         await db.collection('stock').doc(id).delete();
-        showStockMsg("මකා දැමුවා");
+        showStockMsg("Deleted");
         clearStockForm();
         await fetchStock();
-    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
+    } catch (err) { showStockMsg("Error: " + err.message, true); }
 }
 
 function clearStockForm() { stockIdInp.value = stockNameInp.value = stockPriceInp.value = stockQtyInp.value = ""; }
 
 function exportStockCSV() {
-    if (!stockData.length) { showStockMsg("උපස්ථ කිරීමට දත්ත නැත", true); return; }
+    if (!stockData.length) { showStockMsg("No data to export", true); return; }
     let csvRows = [["ID","Name","Price","Quantity"]];
     stockData.forEach(row => csvRows.push([row[0],row[1],row[2],row[3]]));
     const csvContent = csvRows.map(r => r.join(",")).join("\n");
     const blob = new Blob(["\uFEFF"+csvContent], {type:"text/csv;charset=utf-8"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `stock_backup_${new Date().toISOString().slice(0,19)}.csv`; a.click();
-    showStockMsg("තොග CSV බාගත කළා");
+    showStockMsg("Stock CSV downloaded");
 }
 
 async function exportSalesCSV() {
@@ -621,8 +631,8 @@ async function exportSalesCSV() {
         const csvContent = "\uFEFF" + csvRows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csvContent], {type:"text/csv;charset=utf-8"});
         const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `sales_backup_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-        showStockMsg("විකුණුම් CSV බාගත කළා");
-    } catch (err) { showStockMsg("දෝෂය: " + err.message, true); }
+        showStockMsg("Sales CSV downloaded");
+    } catch (err) { showStockMsg("Error: " + err.message, true); }
 }
 
 document.getElementById('addBtn').onclick = addStock;
@@ -639,7 +649,7 @@ function updateItemDatalist() {
     datalist.innerHTML = "";
     stockData.forEach(row => {
         const opt = document.createElement('option');
-        opt.value = `${row[0]} - ${row[1]} (රු.${row[2]})`;
+        opt.value = `${row[0]} - ${row[1]} (Rs.${row[2]})`;
         datalist.appendChild(opt);
     });
 }
@@ -648,29 +658,29 @@ function onItemSelect() {
     if (!selected) return;
     const idPart = selected.split(' - ')[0].trim();
     const item = stockData.find(row => String(row[0]) === idPart);
-    if (item) itemSearch.value = `${item[0]} - ${item[1]} (රු.${item[2]})`;
+    if (item) itemSearch.value = `${item[0]} - ${item[1]} (Rs.${item[2]})`;
 }
 document.getElementById('addToCartBtn').onclick = () => {
     const qty = parseInt(itemQty.value) || 1;
-    if (qty <= 0) { showPosMsg("ප්‍රමාණය වැරදියි", true); return; }
+    if (qty <= 0) { showPosMsg("Invalid quantity", true); return; }
     const selVal = itemSearch.value;
     const idMatch = selVal.match(/^([^\s-]+)/);
-    if (!idMatch) { showPosMsg("භාණ්ඩයක් තෝරන්න", true); return; }
+    if (!idMatch) { showPosMsg("Select an item", true); return; }
     const id = idMatch[1];
     const item = stockData.find(row => String(row[0]) === id);
-    if (!item) { showPosMsg("භාණ්ඩය හමු නොවීය", true); return; }
+    if (!item) { showPosMsg("Item not found", true); return; }
     const available = parseInt(item[3]) || 0;
-    if (qty > available) { showPosMsg(`“${item[1]}” තොගයේ ඇත්තේ ${available} ක් පමණි`, true); return; }
+    if (qty > available) { showPosMsg(`"${item[1]}" only ${available} in stock`, true); return; }
     const existing = cart.find(c => c.id === id);
     if (existing) {
-        if (existing.qty + qty > available) { showPosMsg(`“${item[1]}” සඳහා ප්‍රමාණවත් තොගයක් නැත`, true); return; }
+        if (existing.qty + qty > available) { showPosMsg(`Not enough stock for "${item[1]}"`, true); return; }
         existing.qty += qty;
     } else {
         cart.push({ id: String(item[0]), name: item[1], price: parseFloat(item[2]), qty });
     }
     renderCart(); updateTotals();
     itemSearch.value = ""; itemQty.value = 1;
-    showPosMsg("කරත්තයට එකතු කළා");
+    showPosMsg("Added to cart");
 };
 function renderCart() {
     cartBody.innerHTML = "";
@@ -679,10 +689,10 @@ function renderCart() {
         row.innerHTML = `
             <td>${item.id}</td>
             <td>${escapeHtml(item.name)}</td>
-            <td>රු. ${item.price.toFixed(2)}</td>
+            <td>Rs. ${item.price.toFixed(2)}</td>
             <td><input type="number" min="1" max="${getStockQty(item.id)}" value="${item.qty}" onchange="updateCartQty(${idx}, this.value)"></td>
-            <td>රු. ${(item.price * item.qty).toFixed(2)}</td>
-            <td><button class="btn-red" onclick="removeFromCart(${idx})">ඉවත්</button></td>
+            <td>Rs. ${(item.price * item.qty).toFixed(2)}</td>
+            <td><button class="btn-red" onclick="removeFromCart(${idx})">Remove</button></td>
         `;
         cartBody.appendChild(row);
     });
@@ -695,7 +705,7 @@ function updateCartQty(index, newQty) {
     newQty = parseInt(newQty) || 1;
     const item = cart[index];
     const available = getStockQty(item.id);
-    if (newQty > available) { alert(`උපරිම ප්‍රමාණය ${available}`); newQty = available; }
+    if (newQty > available) { alert(`Maximum available ${available}`); newQty = available; }
     if (newQty < 1) newQty = 1;
     cart[index].qty = newQty;
     renderCart(); updateTotals();
@@ -704,8 +714,8 @@ function removeFromCart(index) { cart.splice(index, 1); renderCart(); updateTota
 function updateTotals() {
     const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
     const courier = parseFloat(courierChargeEl.value) || 0;
-    subtotalSpan.innerText = `රු. ${subtotal.toFixed(2)}`;
-    grandTotalSpan.innerText = `රු. ${(subtotal + courier).toFixed(2)}`;
+    subtotalSpan.innerText = `Rs. ${subtotal.toFixed(2)}`;
+    grandTotalSpan.innerText = `Rs. ${(subtotal + courier).toFixed(2)}`;
 }
 
 // ================== SALE WITH CUSTOM ID ==================
@@ -718,21 +728,22 @@ async function getNextSaleId() {
         transaction.set(counterRef, { lastNumber: nextNumber }, { merge: true });
         return nextNumber;
     });
-    return `jj${newNumber}`;
+    return `JJ${newNumber}`;
 }
 
 confirmSaleBtn.onclick = async function() {
-    if (!custName.value.trim()) { showPosMsg("ගනුදෙනුකරුගේ නම අවශ්‍යයි", true); return; }
-    if (cart.length === 0) { showPosMsg("කරත්තය හිස්", true); return; }
+    if (!custName.value.trim()) { showPosMsg("Customer name required", true); return; }
+    if (cart.length === 0) { showPosMsg("Cart is empty", true); return; }
     const courier = parseFloat(courierChargeEl.value) || 0;
     for (let item of cart) {
         const available = getStockQty(item.id);
-        if (item.qty > available) { showPosMsg(`"${item.name}" සඳහා තොගය ප්‍රමාණවත් නොවේ. ඇත්තේ: ${available}`, true); return; }
+        if (item.qty > available) { showPosMsg(`"${item.name}" stock insufficient. Available: ${available}`, true); return; }
     }
     confirmSaleBtn.disabled = true;
-    confirmSaleBtn.textContent = "⏳ සැකසෙමින්...";
+    confirmSaleBtn.textContent = "⏳ Processing...";
 
     try {
+        const city = document.getElementById('custCity').value.trim();
         const saleId = await getNextSaleId();
         const items = cart.map(c => ({
             id: c.id,
@@ -747,6 +758,7 @@ confirmSaleBtn.onclick = async function() {
         const saleData = {
             customerName: custName.value.trim(),
             address: custAddress.value.trim(),
+            city: city,
             phone: custPhone.value.trim(),
             items: items,
             subtotal: subtotal,
@@ -769,15 +781,15 @@ confirmSaleBtn.onclick = async function() {
         batch.set(db.collection('sales').doc(saleId), saleData);
         await batch.commit();
 
-        showPosMsg(`විකිණීම සාර්ථකයි! Sale ID: ${saleId}`);
-        custName.value = custAddress.value = custPhone.value = "";
+        showPosMsg(`Sale successful! Sale ID: ${saleId}`);
+        custName.value = custAddress.value = custCity.value = custPhone.value = "";
         cart = []; renderCart(); courierChargeEl.value = defaultCourier; updateTotals();
         await fetchStock();
     } catch (err) {
-        showPosMsg("විකිණීම අසාර්ථකයි: " + err.message, true);
+        showPosMsg("Sale failed: " + err.message, true);
     } finally {
         confirmSaleBtn.disabled = false;
-        confirmSaleBtn.textContent = "✅ බිල්පත තහවුරු කරන්න";
+        confirmSaleBtn.textContent = "✅ Confirm Bill";
     }
 };
 
@@ -789,8 +801,20 @@ function handlePaymentFilter() {
 
 async function searchSales() {
     const term = searchSaleInput.value.trim().toLowerCase();
-    salesHistoryBody.innerHTML = "<tr><td colspan='7'>පූරණය වේ...</td></tr>";
+    salesHistoryBody.innerHTML = "<tr><td colspan='7'>Loading...</td></tr>";
     try {
+        const dateFromVal = document.getElementById('dateFrom').value;
+        const dateToVal = document.getElementById('dateTo').value;
+        let fromDate = null, toDate = null;
+        if (dateFromVal) {
+            fromDate = new Date(dateFromVal);
+            fromDate.setHours(0, 0, 0, 0);
+        }
+        if (dateToVal) {
+            toDate = new Date(dateToVal);
+            toDate.setHours(23, 59, 59, 999);
+        }
+
         const collectionName = isDeletedView ? 'deleted_sales' : 'sales';
         let query = db.collection(collectionName).orderBy('timestamp', 'desc');
         const snapshot = await query.get();
@@ -801,6 +825,7 @@ async function searchSales() {
                 SaleID: doc.id,
                 CustomerName: data.customerName,
                 Address: data.address,
+                City: data.city || '',
                 Phone: data.phone,
                 Timestamp: data.timestamp ? data.timestamp.toDate() : new Date(),
                 GrandTotal: data.grandTotal,
@@ -808,21 +833,28 @@ async function searchSales() {
                 Items: data.items,
                 PaymentStatus: data.paymentStatus || 'unpaid'
             };
+
+            let include = true;
             if (term) {
                 const match = sale.SaleID.toLowerCase().includes(term) || 
                               sale.CustomerName.toLowerCase().includes(term);
-                if (match) salesHistoryData.push(sale);
-            } else {
-                salesHistoryData.push(sale);
+                if (!match) include = false;
             }
+            if (include && fromDate && sale.Timestamp < fromDate) include = false;
+            if (include && toDate && sale.Timestamp > toDate) include = false;
+            if (include) salesHistoryData.push(sale);
         });
         salesCurrentPage = 1;
         filterAndRenderSales();
     } catch (err) {
-        salesHistoryBody.innerHTML = "<tr><td colspan='7'>දෝෂය: " + err.message + "</td></tr>";
+        salesHistoryBody.innerHTML = "<tr><td colspan='7'>Error: " + err.message + "</td></tr>";
         console.error(err);
     }
 }
+
+document.getElementById('dateFrom').addEventListener('change', searchSales);
+document.getElementById('dateTo').addEventListener('change', searchSales);
+
 document.getElementById('searchSaleBtn').onclick = searchSales;
 
 function filterAndRenderSales() {
@@ -837,11 +869,11 @@ function toggleDeletedView() {
     isDeletedView = !isDeletedView;
     const btn = document.getElementById('showDeletedBtn');
     if (isDeletedView) {
-        btn.textContent = '📋 සක්‍රීය බිල්පත්';
+        btn.textContent = '📋 Active Bills';
         btn.classList.remove('btn-red');
         btn.classList.add('btn-gray');
     } else {
-        btn.textContent = '🗑️ මැකූ බිල්පත්';
+        btn.textContent = '🗑️ Deleted Bills';
         btn.classList.remove('btn-gray');
         btn.classList.add('btn-red');
     }
@@ -856,7 +888,7 @@ function renderSalesPagination(filteredData) {
     const totalPages = Math.ceil(filteredData.length / SALES_PER_PAGE);
     if (totalPages <= 1) return;
     const prevBtn = document.createElement('button');
-    prevBtn.textContent = 'පෙර'; prevBtn.disabled = salesCurrentPage === 1;
+    prevBtn.textContent = 'Prev'; prevBtn.disabled = salesCurrentPage === 1;
     prevBtn.onclick = () => { if (salesCurrentPage > 1) { salesCurrentPage--; renderSalesPage(); } };
     salesPaginationDiv.appendChild(prevBtn);
     for (let i = 1; i <= totalPages; i++) {
@@ -867,7 +899,7 @@ function renderSalesPagination(filteredData) {
         salesPaginationDiv.appendChild(btn);
     }
     const nextBtn = document.createElement('button');
-    nextBtn.textContent = 'මීළඟ'; nextBtn.disabled = salesCurrentPage === totalPages;
+    nextBtn.textContent = 'Next'; nextBtn.disabled = salesCurrentPage === totalPages;
     nextBtn.onclick = () => { if (salesCurrentPage < totalPages) { salesCurrentPage++; renderSalesPage(); } };
     salesPaginationDiv.appendChild(nextBtn);
 }
@@ -883,19 +915,19 @@ function renderSalesPage(overrideData = null) {
     const start = (salesCurrentPage - 1) * SALES_PER_PAGE;
     const pageData = data.slice(start, start + SALES_PER_PAGE);
     if (!pageData.length) {
-        salesHistoryBody.innerHTML = "<tr><td colspan='7'>ප්‍රතිඵල නැත</td></tr>";
+        salesHistoryBody.innerHTML = "<tr><td colspan='7'>No results</td></tr>";
         document.getElementById('selectAllCheckbox').checked = false;
         return;
     }
     pageData.forEach(sale => {
         const row = document.createElement('tr');
         const isChecked = selectedSales.has(sale.SaleID);
-        const paymentText = sale.PaymentStatus === 'paid' ? '✅ ගෙවූ' : '❌ නොගෙවූ';
+        const paymentText = sale.PaymentStatus === 'paid' ? '✅ Paid' : '❌ Unpaid';
         const paymentClass = sale.PaymentStatus === 'paid' ? 'payment-paid' : 'payment-unpaid';
-        const paymentBtnLabel = sale.PaymentStatus === 'paid' ? 'නොගෙවූ' : 'ගෙවූ';
+        const paymentBtnLabel = sale.PaymentStatus === 'paid' ? 'Mark Unpaid' : 'Mark Paid';
         const actions = isDeletedView ?
             `<button class="btn-green" onclick="event.stopPropagation(); restoreSale('${sale.SaleID}')">↩️ Restore</button>
-             <button class="btn-red" onclick="event.stopPropagation(); permanentDeleteSale('${sale.SaleID}')">🗑️ ස්ථිර</button>` :
+             <button class="btn-red" onclick="event.stopPropagation(); permanentDeleteSale('${sale.SaleID}')">🗑️ Permanent</button>` :
             `<button class="btn-gray" onclick="event.stopPropagation(); openCommentModal('${sale.SaleID}', '${escapeHtml(sale.Comment || '')}')">💬</button>
              <button class="btn-blue" onclick="event.stopPropagation(); togglePayment('${sale.SaleID}', '${sale.PaymentStatus}')">💰 ${paymentBtnLabel}</button>
              <button class="btn-red" onclick="event.stopPropagation(); deleteSale('${sale.SaleID}')">🗑️</button>`;
@@ -904,7 +936,7 @@ function renderSalesPage(overrideData = null) {
             <td>${sale.SaleID}</td>
             <td>${escapeHtml(sale.CustomerName)}</td>
             <td>${sale.Timestamp.toLocaleString('si-LK')}</td>
-            <td>රු. ${parseFloat(sale.GrandTotal).toFixed(2)}</td>
+            <td>Rs. ${parseFloat(sale.GrandTotal).toFixed(2)}</td>
             <td><span class="${paymentClass}">${paymentText}</span></td>
             <td class="action-icons">${actions}</td>
         `;
@@ -920,14 +952,14 @@ function renderSalesPage(overrideData = null) {
 
 async function togglePayment(saleId, currentStatus) {
     const newStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
-    if (!confirm(`මෙම බිල්පත "${newStatus === 'paid' ? 'ගෙවූ' : 'නොගෙවූ'}" ලෙස සලකුණු කරන්නද?`)) return;
+    if (!confirm(`Mark this bill as "${newStatus === 'paid' ? 'Paid' : 'Unpaid'}"?`)) return;
     try {
         await db.collection('sales').doc(saleId).update({ paymentStatus: newStatus });
         const sale = salesHistoryData.find(s => s.SaleID === saleId);
         if (sale) sale.PaymentStatus = newStatus;
         filterAndRenderSales();
     } catch (err) {
-        alert('දෝෂය: ' + err.message);
+        alert('Error: ' + err.message);
     }
 }
 
@@ -952,7 +984,7 @@ function clearSelection() {
 
 // Soft delete
 async function deleteSale(saleId) {
-    if (!confirm(`"${saleId}" බිල්පත මකා තොග යළි එක් කරන්නද?`)) return;
+    if (!confirm(`Delete bill "${saleId}" and restore stock?`)) return;
     try {
         const saleDoc = await db.collection('sales').doc(saleId).get();
         if (!saleDoc.exists) { alert("Sale not found"); return; }
@@ -970,15 +1002,15 @@ async function deleteSale(saleId) {
         batch.set(db.collection('deleted_sales').doc(saleId), saleData);
         batch.delete(db.collection('sales').doc(saleId));
         await batch.commit();
-        alert('විකිණීම මකා දමා තොග යාවත්කාලීන කරන ලදී');
+        alert('Sale deleted and stock restored');
         await fetchStock();
         searchSales();
-    } catch (err) { alert("දෝෂය: " + err.message); }
+    } catch (err) { alert("Error: " + err.message); }
 }
 
 // Restore
 async function restoreSale(saleId) {
-    if (!confirm(`"${saleId}" නැවත සක්‍රිය කර තොගයෙන් අඩු කරන්නද?`)) return;
+    if (!confirm(`Restore "${saleId}" and deduct stock?`)) return;
     try {
         const deletedDoc = await db.collection('deleted_sales').doc(saleId).get();
         if (!deletedDoc.exists) { alert("Deleted sale not found"); return; }
@@ -987,7 +1019,7 @@ async function restoreSale(saleId) {
         for (const item of items) {
             const stockSnap = await db.collection('stock').doc(item.id).get();
             if (!stockSnap.exists || (stockSnap.data().qty || 0) < item.qty) {
-                alert(`"${item.name}" සඳහා ප්‍රමාණවත් තොගයක් නොමැත. Restore කළ නොහැක.`);
+                alert(`Not enough stock for "${item.name}". Cannot restore.`);
                 return;
             }
         }
@@ -999,20 +1031,20 @@ async function restoreSale(saleId) {
         batch.set(db.collection('sales').doc(saleId), saleData);
         batch.delete(db.collection('deleted_sales').doc(saleId));
         await batch.commit();
-        alert('විකිණීම නැවත සක්‍රිය කරන ලදී');
+        alert('Sale restored');
         await fetchStock();
         searchSales();
-    } catch (err) { alert("දෝෂය: " + err.message); }
+    } catch (err) { alert("Error: " + err.message); }
 }
 
 // Permanent delete
 async function permanentDeleteSale(saleId) {
-    if (!confirm(`"${saleId}" ස්ථිරවම මකන්නද?`)) return;
+    if (!confirm(`Permanently delete "${saleId}"?`)) return;
     try {
         await db.collection('deleted_sales').doc(saleId).delete();
-        alert('ස්ථිරවම මකා දමන ලදී');
+        alert('Permanently deleted');
         searchSales();
-    } catch (err) { alert("දෝෂය: " + err.message); }
+    } catch (err) { alert("Error: " + err.message); }
 }
 
 // Comment modal
@@ -1029,7 +1061,7 @@ async function saveComment() {
         await db.collection('sales').doc(saleId).update({ comment: comment });
         closeCommentModal();
         searchSales();
-    } catch (err) { alert("දෝෂය: " + err.message); }
+    } catch (err) { alert("Error: " + err.message); }
 }
 
 // ================== BILL VIEW ==================
@@ -1048,6 +1080,7 @@ async function getSaleData(saleId) {
         customer: {
             name: data.customerName,
             address: data.address,
+            city: data.city || '',
             phone: data.phone,
             subtotal: data.subtotal,
             courier: data.courier,
@@ -1069,10 +1102,11 @@ async function viewBill(saleId) {
     try {
         const json = await getSaleData(saleId);
         const { customer, items } = json;
-        let html = `<img class="logo-print" src="https://i.postimg.cc/7Y8D56Py/Blue-and-Orange-Minimalist-Gaming-Laptop-Sale-Instagram-Post-(16).png" alt="Logo">`;
+        let html = `<img class="logo-print" src="${LOGO_URL}" alt="Logo">`;
         html += `<p><strong>Customer:</strong> ${escapeHtml(customer.name || '')}<br>
                     <strong>Address:</strong> ${escapeHtml(customer.address || '')}<br>
-                    <strong>Telephone Number:</strong> ${escapeHtml(customer.phone || '')}</p>
+                    <strong>City:</strong> ${escapeHtml(customer.city || '')}<br>
+                    <strong>Phone:</strong> ${escapeHtml(customer.phone || '')}</p>
                     <table><thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Total</th></tr></thead><tbody>`;
         items.forEach(it => html += `<tr><td>${escapeHtml(it.name)}</td><td>Rs. ${it.price}</td><td>${it.qty}</td><td>Rs. ${it.total}</td></tr>`);
         html += `</tbody></table>
@@ -1096,6 +1130,7 @@ async function printSelectedBills() {
             const { customer, items } = json;
             combinedHtml += `
                 <div class="mini-bill">
+                    <img src="${LOGO_URL}" style="width:80px; display:block; margin:0 auto 3mm;" alt="Logo">
                     <div class="bill-header">Sale ID: ${saleIds[index]}</div>
                     <div class="bill-customer">${escapeHtml(customer.name || '')}</div>
                     <div class="bill-items">${items.map(it => `${it.name} x${it.qty} Rs.${it.total}`).join('<br>')}</div>
@@ -1112,9 +1147,9 @@ async function printSelectedBills() {
 }
 
 async function downloadSelectedBills() {
-    if (selectedSales.size === 0) { alert("කරුණාකර අවම වශයෙන් එක් බිල්පතක් තෝරන්න."); return; }
+    if (selectedSales.size === 0) { alert("Please select at least one bill."); return; }
     const saleIds = Array.from(selectedSales);
-    const csvHeader = ["SaleID","Date","CustomerName","Address","Phone","ItemID","ItemName","Price","Qty","ItemTotal","Subtotal","Courier","GrandTotal","PaymentStatus"];
+    const csvHeader = ["SaleID","Date","CustomerName","Address","City","Phone","ItemID","ItemName","Price","Qty","ItemTotal","Subtotal","Courier","GrandTotal","PaymentStatus"];
     const csvRows = [csvHeader];
     for (const id of saleIds) {
         try {
@@ -1123,6 +1158,7 @@ async function downloadSelectedBills() {
             const date = new Date().toLocaleString();
             const customerName = customer.name || '';
             const address = customer.address || '';
+            const city = customer.city || '';
             const phone = customer.phone || '';
             const subtotal = customer.subtotal;
             const courier = customer.courier;
@@ -1130,10 +1166,10 @@ async function downloadSelectedBills() {
             const paymentStatus = salesHistoryData.find(s => s.SaleID === id)?.PaymentStatus || 'unpaid';
             if (items && items.length > 0) {
                 items.forEach(item => {
-                    csvRows.push([id, date, customerName, address, phone, item.id, item.name, item.price, item.qty, item.total, subtotal, courier, grandTotal, paymentStatus]);
+                    csvRows.push([id, date, customerName, address, city, phone, item.id, item.name, item.price, item.qty, item.total, subtotal, courier, grandTotal, paymentStatus]);
                 });
             } else {
-                csvRows.push([id, date, customerName, address, phone, '', '', '', '', '', subtotal, courier, grandTotal, paymentStatus]);
+                csvRows.push([id, date, customerName, address, city, phone, '', '', '', '', '', subtotal, courier, grandTotal, paymentStatus]);
             }
         } catch (err) { console.error(err); }
     }
@@ -1166,6 +1202,7 @@ async function openReports() {
             saleId: doc.id,
             customer: d.customerName,
             address: d.address,
+            city: d.city || '',
             phone: d.phone,
             date: d.timestamp ? d.timestamp.toDate().toLocaleString('si-LK') : '',
             total: d.grandTotal,
@@ -1175,34 +1212,34 @@ async function openReports() {
 
     let html = '';
     // Stock table
-    html += '<div class="report-section"><h3>📦 තොග අයිතම</h3><div class="report-table-container"><table><thead><tr><th>ID</th><th>නම</th><th>මිල (රු.)</th><th>ප්‍රමාණය</th><th>වටිනාකම</th></tr></thead><tbody>';
+    html += '<div class="report-section"><h3>📦 Stock Items</h3><div class="report-table-container"><table><thead><tr><th>ID</th><th>Name</th><th>Price (Rs.)</th><th>Qty</th><th>Value</th></tr></thead><tbody>';
     reportStockData.forEach(item => {
         html += `<tr><td>${escapeHtml(item.id)}</td><td>${escapeHtml(item.name)}</td><td>${parseFloat(item.price).toFixed(2)}</td><td>${parseInt(item.qty)}</td><td>${(item.price * item.qty).toFixed(2)}</td></tr>`;
     });
     html += '</tbody></table></div></div>';
 
     // All Sales
-    html += '<div class="report-section"><h3>🧾 සියලුම බිල්පත්</h3><div class="report-table-container"><table><thead><tr><th>Sale ID</th><th>ගනුදෙනුකරු</th><th>දිනය</th><th>මුළු මුදල</th><th>ගෙවීම්</th></tr></thead><tbody>';
+    html += '<div class="report-section"><h3>🧾 All Bills</h3><div class="report-table-container"><table><thead><tr><th>Sale ID</th><th>Customer</th><th>Date</th><th>Total</th><th>Payment</th></tr></thead><tbody>';
     reportSalesData.forEach(sale => {
-        const paymentText = sale.payment === 'paid' ? '✅ ගෙවූ' : '❌ නොගෙවූ';
+        const paymentText = sale.payment === 'paid' ? '✅ Paid' : '❌ Unpaid';
         const paymentClass = sale.payment === 'paid' ? 'payment-paid' : 'payment-unpaid';
-        html += `<tr><td>${sale.saleId}</td><td>${escapeHtml(sale.customer)}</td><td>${sale.date}</td><td>රු. ${parseFloat(sale.total).toFixed(2)}</td><td class="${paymentClass}">${paymentText}</td></tr>`;
+        html += `<tr><td>${sale.saleId}</td><td>${escapeHtml(sale.customer)}</td><td>${sale.date}</td><td>Rs. ${parseFloat(sale.total).toFixed(2)}</td><td class="${paymentClass}">${paymentText}</td></tr>`;
     });
     html += '</tbody></table></div></div>';
 
     // Paid
     const paid = reportSalesData.filter(s => s.payment === 'paid');
-    html += '<div class="report-section"><h3>✅ ගෙවූ බිල්පත්</h3><div class="report-table-container"><table><thead><tr><th>Sale ID</th><th>ගනුදෙනුකරු</th><th>දිනය</th><th>මුළු මුදල</th></tr></thead><tbody>';
+    html += '<div class="report-section"><h3>✅ Paid Bills</h3><div class="report-table-container"><table><thead><tr><th>Sale ID</th><th>Customer</th><th>Date</th><th>Total</th></tr></thead><tbody>';
     paid.forEach(sale => {
-        html += `<tr><td>${sale.saleId}</td><td>${escapeHtml(sale.customer)}</td><td>${sale.date}</td><td>රු. ${parseFloat(sale.total).toFixed(2)}</td></tr>`;
+        html += `<tr><td>${sale.saleId}</td><td>${escapeHtml(sale.customer)}</td><td>${sale.date}</td><td>Rs. ${parseFloat(sale.total).toFixed(2)}</td></tr>`;
     });
     html += '</tbody></table></div></div>';
 
     // Unpaid
     const unpaid = reportSalesData.filter(s => s.payment === 'unpaid');
-    html += '<div class="report-section"><h3>❌ නොගෙවූ බිල්පත්</h3><div class="report-table-container"><table><thead><tr><th>Sale ID</th><th>ගනුදෙනුකරු</th><th>දිනය</th><th>මුළු මුදල</th></tr></thead><tbody>';
+    html += '<div class="report-section"><h3>❌ Unpaid Bills</h3><div class="report-table-container"><table><thead><tr><th>Sale ID</th><th>Customer</th><th>Date</th><th>Total</th></tr></thead><tbody>';
     unpaid.forEach(sale => {
-        html += `<tr><td>${sale.saleId}</td><td>${escapeHtml(sale.customer)}</td><td>${sale.date}</td><td>රු. ${parseFloat(sale.total).toFixed(2)}</td></tr>`;
+        html += `<tr><td>${sale.saleId}</td><td>${escapeHtml(sale.customer)}</td><td>${sale.date}</td><td>Rs. ${parseFloat(sale.total).toFixed(2)}</td></tr>`;
     });
     html += '</tbody></table></div></div>';
 

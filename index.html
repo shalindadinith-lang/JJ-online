@@ -933,7 +933,7 @@ function exportToExcel() {
 
 // ================== AI CHAT ==================
 function openAIChat() {
-    if (!openRouterAPIKey || openRouterAPIKey.trim() === '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') {
+    if (!openRouterAPIKey || openRouterAPIKey.trim() === '') {
         alert("OpenRouter API key එක Settings තුළ ඇතුලත් කරන්න.\nනොමිලේ ගන්න: https://openrouter.ai/keys");
         return;
     }
